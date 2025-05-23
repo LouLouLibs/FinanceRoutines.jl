@@ -39,6 +39,7 @@ function import_ccm_link(wrds_conn::Connection)
     # @rsubset(df_linktable, !ismissing(:lpermno))
     df_linktable[ ismissing.(df_linktable.linkenddt), :linkenddt ] .= Dates.today();
     disallowmissing!(df_linktable, [:linkdt, :linkenddt, :lpermno]);
+    @debug "renaming lpermno in linktable to permno"
     rename!(df_linktable, :lpermno => :permno);
 
     return df_linktable
@@ -67,6 +68,7 @@ function link_Funda(df_linktable::DataFrame, df_funda::DataFrame)
     funda_link_permno = FlexiJoins.innerjoin(
         (select(df_funda, :gvkey, :datadate), df_linktable),
         by_key(:gvkey) & by_pred(:datadate, ∈, x->x.linkdt..x.linkenddt) )
+    
     select!(funda_link_permno,
         Not([:gvkey_1, :linkprim, :liid, :linktype, :linkdt, :linkenddt]) )
 
@@ -75,19 +77,23 @@ function link_Funda(df_linktable::DataFrame, df_funda::DataFrame)
 end
 
 
-function link_MSF(df_linktable::DataFrame, df_msf::DataFrame)
+function link_MSF(df_linktable::DataFrame, df_msf::DataFrame;
+    variables::Vector{Symbol}=Symbol[])
+
 # Merge with CRSP
     df_msf_linked = FlexiJoins.innerjoin(
         (df_msf, df_linktable),
         by_key(:permno) & by_pred(:date, ∈, x->x.linkdt..x.linkenddt)
     )
     @p df_msf_linked |> filter!(.!ismissing.(_.gvkey))
-    select!(df_msf_linked, :date, :permno, :gvkey)
+    col_keep = vcat([:date, :permno, :gvkey], intersect(variables, names(df_msf_linked))) |> unique
+    select!(df_msf_linked, col_keep)
     
 # merge this back
     df_msf_merged = leftjoin(df_msf, df_msf_linked, on = [:date, :permno], source="_merge")
     transform!(df_msf_merged, :date => ByRow(year) => :datey)
     select!(df_msf_merged, Not(:_merge))
+
 
     return df_msf_merged
 end
