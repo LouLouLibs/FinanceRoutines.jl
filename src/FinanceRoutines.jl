@@ -5,7 +5,7 @@ module FinanceRoutines
 import Downloads
 import ZipFile
 import CSV
-import DataFrames: AbstractDataFrame, AsTable, DataFrame, ByRow, groupby, nrow, passmissing, Not,
+import DataFrames: AbstractDataFrame, AsTable, DataFrame, DataFrameRow, ByRow, groupby, nrow, passmissing, Not,
   rename!, select, select!, subset!, transform!, leftjoin, disallowmissing!
 import DataPipes: @p
 import Dates: Dates, Date, Day, Month, year
@@ -45,8 +45,10 @@ include("Merge_CRSP_Comp.jl")
 export greet_FinanceRoutines  # for debugging
 
 # Yields on Treasuries
-export import_GSW
-export estimate_yield_GSW!, estimate_price_GSW!, estimate_return_GSW!
+export import_gsw_parameters # basic data import function
+export GSWParameters         # the GSW type of yield curve calculations
+export gsw_yield, gsw_price, gsw_forward_rate, gsw_yield_curve, gsw_price_curve, 
+    gsw_return, gsw_excess_return
 
 # Fama-French data
 export import_FF3
