@@ -42,9 +42,6 @@ end
 
     # just for checking things on the fly
     @testset "Debugging tests ..." begin
-        @test FinanceRoutines.greet_FinanceRoutines() == "Hello FinanceRoutines!"
-        @test FinanceRoutines.greet_FinanceRoutines() != "Hello world!"
-
         WRDS_USERNAME = get(ENV, "WRDS_USERNAME", "")
         WRDS_PWD = get(ENV, "WRDS_PWD", "")
         @test !isempty(WRDS_USERNAME)
