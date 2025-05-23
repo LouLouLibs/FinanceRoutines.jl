@@ -46,6 +46,7 @@ LibPQ.execute(wrds_conn, postgre_query) |> DataFrame
 
 Now imagine that we want to pull columns from the monthly stock file with the following conditions: a given time frame (e.g. the 2000s) and company names that contain "AP".
 We would get the `permno` that match from `StkSecurityInfoHist` and match it on the fly to `msf`
+
 ```julia
 postgre_query = """
 SELECT msf.cusip, msf.permno, msf.mthcaldt, msf.mthprc, msf.mthret, msf.mthvol, msf.shrout, msf.siccd,
@@ -57,9 +58,12 @@ WHERE stkinfo.issuernm ~ '(^APPLE|TESLA)'
   AND msf.mthcaldt >= '2010-01-01'
   AND msf.mthcaldt <= '2019-12-31';
 """
+
 df_msf = LibPQ.execute(wrds_conn, postgre_query) |> DataFrame
 tabulate(df_msf, [:permno, :issuernm])
+```
 
+```bash
  permno  issuernm                   │ Freq.  Percent  Cum           Hist.
 ────────────────────────────────────┼───────────────────────────────────────────────
  14593   APPLE COMPUTER INC         │  600    29.2    29   ███████████████████████▉
@@ -68,7 +72,6 @@ tabulate(df_msf, [:permno, :issuernm])
  93436   TESLA MOTORS INC           │  115     5.6    78   ████▋
  93436   TESLA INC                  │  460    22.4    100  ██████████████████▎
  ```
-
 
 
 
