@@ -13,7 +13,8 @@ makedocs(
     pages=[
         "Home" => "index.md",
         "Manual" => [
-            "man/wrds_guide.md"
+            "man/wrds_guide.md",
+            "man/yield_curve_gsw.md"
         ],
         "Demos" => [
             "demo/beta.md",

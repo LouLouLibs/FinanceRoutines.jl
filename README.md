@@ -82,7 +82,7 @@ df_FF3_daily = import_FF3(:daily)
 The function downloads yield curves from the [NY Fed GSW](https://www.federalreserve.gov/pubs/feds/2006/200628/200628abs.html) and estimate returns based on the curves
 
 ```julia
-df_GSW = import_GSW();
+df = import_gsw_parameters(date_range=(Date("1960-01-01"), Dates.today()) )
 estimate_yield_GSW!(df_GSW; maturity=1); # maturity is in years
 select(df_GSW, :date, :yield_1y)
 ```
