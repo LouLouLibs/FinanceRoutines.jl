@@ -82,10 +82,20 @@ df_FF3_daily = import_FF3(:daily)
 The function downloads yield curves from the [NY Fed GSW](https://www.federalreserve.gov/pubs/feds/2006/200628/200628abs.html) and estimate returns based on the curves
 
 ```julia
-df = import_gsw_parameters(date_range=(Date("1960-01-01"), Dates.today()) )
-estimate_yield_GSW!(df_GSW; maturity=1); # maturity is in years
-select(df_GSW, :date, :yield_1y)
+df_GSW = import_gsw_parameters(date_range=(Date("1960-01-01"), Dates.today()) )
+FinanceRoutines.add_yields!(df_GSW, [1, 10]) # maturities is in years
+# or compute the yields yourself using functions
+transform!(df_GSW, 
+    AsTable(:) => ByRow(row -> 
+        begin 
+            gsw_params = GSWParameters(row)
+            ismissing(gsw_params) ? missing : gsw_yield(5, gsw_params)
+        end) => :yield_5y,
+    )
 ```
+
+See the [doc](https://eloualiche.github.io/FinanceRoutines.jl/) for more options.
+
 
 ### Common operations in asset pricing
 
