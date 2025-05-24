@@ -27,13 +27,7 @@ ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
 
 [compat]
 CSV = "0.10"
-DataPipes = "0.3.18"
-Decimals = "0.4.1"
-GLM = "1.9.0"
-LinearAlgebra = "1.11.0"
-Logging = "1.11.0"
-Statistics = "1.11.1"
-ZipFile = "0.10"
+DataFrames = "1"
 julia = "1"
 
 [extras]
