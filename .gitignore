@@ -3,4 +3,19 @@
 # STANDARD JULIA IGNORE
 /Manifest.toml
 docs/build/
+.DS_Store
+docs/.DS_Store
+.env
+.env.gpg
+documentation
+# ---------------------------------------------------------
+
+
+# ---------------------------------------------------------
+# DEVELOPMENT FILES
+sandbox.jl
+sandbox_test.jl
+sandbox.R
+src/towards_ciz_v2.jl
+tmp
 # ---------------------------------------------------------
