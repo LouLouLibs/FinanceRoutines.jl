@@ -1,11 +1,11 @@
 module FinanceRoutines
 
 
-# ------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------
 import Downloads
 import ZipFile
 import CSV
-import DataFrames: AbstractDataFrame, AsTable, DataFrame, ByRow, groupby, nrow, passmissing, Not,
+import DataFrames: AbstractDataFrame, AsTable, DataFrame, DataFrameRow, ByRow, groupby, nrow, passmissing, Not,
   rename!, select, select!, subset!, transform!, leftjoin, disallowmissing!
 import DataPipes: @p
 import Dates: Dates, Date, Day, Month, year
@@ -25,10 +25,10 @@ import ShiftedArrays: lag
 import Tables: columntable
 import WeakRefStrings: String3, String7, String15
 import ZipFile: ZipFile.Reader
-# ------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------
 
 
-# ------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------
 # Import functions
 include("Utilities.jl")
 include("betas.jl")
@@ -37,16 +37,18 @@ include("ImportYields.jl")
 include("ImportCRSP.jl")
 include("ImportComp.jl")
 include("Merge_CRSP_Comp.jl")
-# ------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------
 
 
-# ------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------
 # List of exported functions
 export greet_FinanceRoutines  # for debugging
 
 # Yields on Treasuries
-export import_GSW
-export estimate_yield_GSW!, estimate_price_GSW!, estimate_return_GSW!
+export import_gsw_parameters # basic data import function
+export GSWParameters         # the GSW type of yield curve calculations
+export gsw_yield, gsw_price, gsw_forward_rate, gsw_yield_curve, gsw_price_curve, 
+    gsw_return, gsw_excess_return
 
 # Fama-French data
 export import_FF3
@@ -65,9 +67,8 @@ export link_MSF
 
 # More practical functions
 export calculate_rolling_betas
+# --------------------------------------------------------------------------------------------------
 
 
-# ------------------------------------------------------------------------------------------
-
-
+# --------------------------------------------------------------------------------------------------
 end

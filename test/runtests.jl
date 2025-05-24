@@ -1,4 +1,6 @@
 # --------------------------------------------------------------------------------------------------
+# using Revise; import Pkg; Pkg.activate(".") # for debugging
+
 using FinanceRoutines
 using Test
 
@@ -10,7 +12,9 @@ import DataPipes: @p
 
 # --------------------------------------------------------------------------------------------------
 const testsuite = [
-    "KenFrench", "WRDS", "Yields", "betas"
+    "KenFrench", 
+    "WRDS", "betas",
+    "Yields", 
 ]
 # --------------------------------------------------------------------------------------------------
 
@@ -42,9 +46,6 @@ end
 
     # just for checking things on the fly
     @testset "Debugging tests ..." begin
-        @test FinanceRoutines.greet_FinanceRoutines() == "Hello FinanceRoutines!"
-        @test FinanceRoutines.greet_FinanceRoutines() != "Hello world!"
-
         WRDS_USERNAME = get(ENV, "WRDS_USERNAME", "")
         WRDS_PWD = get(ENV, "WRDS_PWD", "")
         @test !isempty(WRDS_USERNAME)
