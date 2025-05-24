@@ -15,40 +15,6 @@
 # ------------------------------------------------------------------------------------------
 
 
-# ------------------------------------------------------------------------------------------
-# function list_crsp(;
-#     wrds_conn, user, password)
-
-#     list_libraries = """
-#         WITH RECURSIVE "names"("name") AS (
-#             SELECT n.nspname AS "name"
-#                 FROM pg_catalog.pg_namespace n
-#                 WHERE n.nspname !~ '^pg_'
-#                     AND n.nspname <> 'information_schema')
-#             SELECT "name"
-#                 FROM "names"
-#                 WHERE pg_catalog.has_schema_privilege(
-#                     current_user, "name", 'USAGE') = TRUE;
-#         """
-#     res_list_libraries = execute(wrds_conn, list_libraries);
-#     df_libraries = DataFrame(columntable(res_list_libraries))
-#     @rsubset(df_libraries, occursin(r"crsp", :name) )
-
-#     library = "crsp"
-#     list_tables = """
-#         SELECT table_name FROM INFORMATION_SCHEMA.views
-#             WHERE table_schema IN ('$library');
-#         """
-#     res_list_tables = execute(wrds_conn, list_tables);
-#     df_tables = DataFrame(columntable(res_list_tables))
-#     @rsubset(df_tables, occursin(r"mse", :table_name) )
-
-#     return run_sql_query(conn, query)
-
-
-# end
-# ------------------------------------------------------------------------------------------
-
 
 # ------------------------------------------------------------------------------------------
 """
@@ -77,14 +43,14 @@ function import_MSF(wrds_conn::Connection;
 
     # -- GETTING COLUMN NAMES
     # download potential columns
-    msenames_columns = get_postgres_columns("crsp", "msenames"; wrds_conn=wrds_conn,
+    msenames_columns = _get_postgres_columns("crsp", "msenames"; wrds_conn=wrds_conn,
         prior_columns = vcat(["PERMNO", "NAMEDT", "NAMEENDT", "SHRCD", "EXCHCD", "HEXCD", 
                               "NAICS", "HSICCD", "CUSIP"],
                             uppercase.(variables))
     )
     msenames_columns = join(uppercase.(msenames_columns), ", ")
 
-    msf_columns = get_postgres_columns("crsp", "msf"; wrds_conn=wrds_conn,
+    msf_columns = _get_postgres_columns("crsp", "msf"; wrds_conn=wrds_conn,
         prior_columns = vcat(["PERMNO","PERMCO","DATE","PRC","ALTPRC","RET","RETX","SHROUT","CFACPR","CFACSHR"],
                              uppercase.(variables))
     )
@@ -339,16 +305,23 @@ function import_MSF_v2(wrds_conn::Connection;
     # ----------------------------------------------------------------------------------------------
     # the easy way
     @log_msg "# -- GETTING MONTHLY STOCK FILE (CIZ) ... msf_v2"
-    # msf_columns = get_postgres_columns("crsp", "msf_v2"; wrds_conn=wrds_conn) |> sort
+    msf_v2_columns = _get_postgres_columns("crsp", "msf_v2"; wrds_conn=wrds_conn) |> sort
+    col_select = ["permno", "hdrcusip", "mthcaldt", "mthprc", "mthret", "mthcap", "shrout",
+        "mthretx", "mthprevcap", "mthprevprc", "permco"]
+    col_query = @p vcat(col_select, variables) |> 
+        uppercase.(__) |> filter(!isempty) |> filter(_ ∈ msf_v2_columns)
+    # note that selecting all variables to download here is a lot slower than with msf_v1 because of the many more variables ...
+
     postgre_query_msf = """
-        SELECT *
-            FROM crsp.msf_v2
-            WHERE MTHCALDT >= '$(string(date_range[1]))' AND MTHCALDT <= '$(string(date_range[2]))'
-              AND SHARETYPE = 'NS' AND SECURITYTYPE = 'EQTY' AND SECURITYSUBTYPE = 'COM' 
-              AND USINCFLG = 'Y' AND ISSUERTYPE IN ('ACOR', 'CORP')
-              AND PRIMARYEXCH IN ('N', 'A', 'Q') AND CONDITIONALTYPE = 'RW' AND TRADINGSTATUSFLG = 'A'
+    SELECT $(join(col_query, ", "))
+        FROM crsp.msf_v2
+        WHERE MTHCALDT >= '$(string(date_range[1]))' AND MTHCALDT <= '$(string(date_range[2]))'
+          AND SHARETYPE = 'NS' AND SECURITYTYPE = 'EQTY' AND SECURITYSUBTYPE = 'COM' 
+          AND USINCFLG = 'Y' AND ISSUERTYPE IN ('ACOR', 'CORP')
+          AND PRIMARYEXCH IN ('N', 'A', 'Q') AND CONDITIONALTYPE = 'RW' AND TRADINGSTATUSFLG = 'A'
     """
     df_msf_v2 = execute(wrds_conn, postgre_query_msf) |> DataFrame;
+
     transform!(df_msf_v2,     # clean up the dataframe
         names(df_msf_v2, check_integer.(eachcol(df_msf_v2))) .=> (x->convert.(Union{Missing, Int}, x));
         renamecols = false);
@@ -360,8 +333,8 @@ function import_MSF_v2(wrds_conn::Connection;
     # the hard way
     # ------
     log_msg("# -- GETTING MONTHLY STOCK FILE (CIZ) ... stkmthsecuritydata")
-    msf_columns = get_postgres_columns("crsp", "stkmthsecuritydata"; wrds_conn=wrds_conn) # download potential columns
-    # msf_columns = get_postgres_columns("crsp", "msf_v2"; wrds_conn=wrds_conn) # this one is pre-merged!
+    msf_columns = _get_postgres_columns("crsp", "stkmthsecuritydata"; wrds_conn=wrds_conn) # download potential columns
+    # msf_columns = _get_postgres_columns("crsp", "msf_v2"; wrds_conn=wrds_conn) # this one is pre-merged!
     msf_columns = join(uppercase.(msf_columns), ", ")
 
     # legacy SIZ to CIZ conversion of shrcd flag (see doc)    
@@ -389,7 +362,7 @@ function import_MSF_v2(wrds_conn::Connection;
 
     
     # -- need to get shrout
-    # stkshares = get_postgres_columns("crsp", "stkshares"; wrds_conn=wrds_conn)
+    # stkshares = _get_postgres_columns("crsp", "stkshares"; wrds_conn=wrds_conn)
     postgre_query_stkshares = """
     SELECT * FROM crsp.stkshares
         WHERE SHRSTARTDT >= '$(string(date_range[1]))' AND SHRENDDT <= '$(string(date_range[2]))'
@@ -410,12 +383,12 @@ function import_MSF_v2(wrds_conn::Connection;
     # ----------------------------------------------------------------------------------------------
     # ------
     @log_msg "# -- GETTING StkSecurityInfoHist (CIZ)"
-    # stksecurityinfo = get_postgres_columns("crsp", "stksecurityinfohist"; wrds_conn=wrds_conn)
+    # stksecurityinfo = _get_postgres_columns("crsp", "stksecurityinfohist"; wrds_conn=wrds_conn)
     stksecurityinfo_cols = vcat(
         ["PERMNO", "SecInfoStartDt", "SecInfoEndDt", "IssuerNm", "ShareClass", 
          "PrimaryExch", "TradingStatusFlg", "NAICS", "SICCD", "HDRCUSIP"],
         uppercase.(variables)) |> filter(!isempty) |> unique 
-    stksecurityinfo = get_postgres_columns("crsp", "stksecurityinfohist"; wrds_conn=wrds_conn,
+    stksecurityinfo = _get_postgres_columns("crsp", "stksecurityinfohist"; wrds_conn=wrds_conn,
         prior_columns = stksecurityinfo_cols) |> sort
     stksecurityinfo_cols = join(uppercase.(stksecurityinfo_cols), ", ")
 
@@ -540,8 +513,8 @@ function import_DSF_v2(wrds_conn::Connection;
 
 
     # could pick either way ... 
-    # dsf_columns = get_postgres_columns("crsp", "dsf_v2"; wrds_conn=wrds_conn) |> sort
-    # stkmthsecuritydata_columns = get_postgres_columns("crsp", "stkdlysecuritydata"; wrds_conn=wrds_conn) |> sort
+    # dsf_columns = _get_postgres_columns("crsp", "dsf_v2"; wrds_conn=wrds_conn) |> sort
+    # stkmthsecuritydata_columns = _get_postgres_columns("crsp", "stkdlysecuritydata"; wrds_conn=wrds_conn) |> sort
 
 # set up the query for msf
     postgre_query_dsf = """
@@ -590,7 +563,7 @@ end
 #      WHERE table_schema = \$1
 # """
 # postgres_res = execute(wrds_conn, postgres_query, (table_schema,))
-function get_postgres_columns(table_schema, table_name; wrds_conn, prior_columns::Vector{String} = [""])
+function _get_postgres_columns(table_schema, table_name; wrds_conn, prior_columns::Vector{String} = [""])
     
     # download potential columns
     postgres_query= """
@@ -611,7 +584,7 @@ function get_postgres_columns(table_schema, table_name; wrds_conn, prior_columns
 end 
 
 
-function get_postgres_table(table_schema, table_name; wrds_conn, prior_columns::Vector{String} = [""])
+function _get_postgres_table(table_schema, table_name; wrds_conn, prior_columns::Vector{String} = [""])
     
     if isempty(prior_columns) || prior_columns == [""]
         columns = "*"
@@ -627,5 +600,39 @@ function get_postgres_table(table_schema, table_name; wrds_conn, prior_columns::
     postgres_res = execute(wrds_conn, postgres_query)
     return columntable(postgres_res)
 end 
+# --------------------------------------------------------------------------------------------------
 
 
+# --------------------------------------------------------------------------------------------------
+# function list_crsp(;
+#     wrds_conn, user, password)
+
+#     list_libraries = """
+#         WITH RECURSIVE "names"("name") AS (
+#             SELECT n.nspname AS "name"
+#                 FROM pg_catalog.pg_namespace n
+#                 WHERE n.nspname !~ '^pg_'
+#                     AND n.nspname <> 'information_schema')
+#             SELECT "name"
+#                 FROM "names"
+#                 WHERE pg_catalog.has_schema_privilege(
+#                     current_user, "name", 'USAGE') = TRUE;
+#         """
+#     res_list_libraries = execute(wrds_conn, list_libraries);
+#     df_libraries = DataFrame(columntable(res_list_libraries))
+#     @rsubset(df_libraries, occursin(r"crsp", :name) )
+
+#     library = "crsp"
+#     list_tables = """
+#         SELECT table_name FROM INFORMATION_SCHEMA.views
+#             WHERE table_schema IN ('$library');
+#         """
+#     res_list_tables = execute(wrds_conn, list_tables);
+#     df_tables = DataFrame(columntable(res_list_tables))
+#     @rsubset(df_tables, occursin(r"mse", :table_name) )
+
+#     return run_sql_query(conn, query)
+
+
+# end
+# --------------------------------------------------------------------------------------------------
