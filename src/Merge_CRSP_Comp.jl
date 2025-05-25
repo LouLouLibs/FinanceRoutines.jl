@@ -262,16 +262,16 @@ function link_MSF(df_linktable::DataFrame, df_msf::DataFrame;
         by_key(:permno) & by_pred(:date, ∈, x->x.linkdt..x.linkenddt)
     )
     @p df_msf_linked |> filter!(.!ismissing.(_.gvkey))
-    col_keep = vcat([:date, :permno, :gvkey], intersect(variables, names(df_msf_linked))) |> unique
+    col_keep = vcat([:date, :permno, :gvkey], intersect(variables, propertynames(df_msf_linked))) |> unique
     select!(df_msf_linked, col_keep)
     
 # merge this back
-    df_msf_merged = leftjoin(df_msf, df_msf_linked, on = [:date, :permno], source="_merge")
-    transform!(df_msf_merged, :date => ByRow(year) => :datey)
-    select!(df_msf_merged, Not(:_merge))
+    df_msf_linked = leftjoin(df_msf, df_msf_linked, on = [:date, :permno], source="_merge")
+    transform!(df_msf_linked, :date => ByRow(year) => :datey)
+    select!(df_msf_linked, Not(:_merge))
 
 
-    return df_msf_merged
+    return df_msf_linked
 end
 # ------------------------------------------------------------------------------------------
 
