@@ -2,7 +2,7 @@
 
 | **Documentation**                                                               | **Build Status**                                                                                | **Code Coverage**                                                                                |
 |:-------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------:|:------------------------------------------------------------------------------------------------:|
-| [![][docs-stable-img]][docs-stable-url] [![][docs-latest-img]][docs-latest-url] | [![CI Testing](https://github.com/eloualiche/FinanceRoutines.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/eloualiche/FinanceRoutines.jl/actions/workflows/CI.yml?query=branch%3Amain) | [![codecov](https://codecov.io/gh/eloualiche/FinanceRoutines.jl/graph/badge.svg?token=A6IYNO17NK)](https://codecov.io/gh/eloualiche/FinanceRoutines.jl)
+| [![][docs-stable-img]][docs-stable-url] [![][docs-latest-img]][docs-latest-url] | [![CI Testing](https://github.com/louloulibs/FinanceRoutines.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/louloulibs/FinanceRoutines.jl/actions/workflows/CI.yml?query=branch%3Amain) | [![codecov](https://codecov.io/gh/louloulibs/FinanceRoutines.jl/graph/badge.svg?token=A6IYNO17NK)](https://codecov.io/gh/louloulibs/FinanceRoutines.jl)
 
 
 `FinanceRoutines.jl` is a package that contains useful functions to download and process academic financial data.
@@ -16,7 +16,7 @@ So far the package provides function to import:
 
 ## Installation
 
-`FinanceRoutines.jl` is a not yet a registered package.
+`FinanceRoutines.jl` is not yet a registered package.
 You can install it from github  via
 
 ```julia
@@ -94,7 +94,7 @@ transform!(df_GSW,
     )
 ```
 
-See the [doc](https://eloualiche.github.io/FinanceRoutines.jl/) for more options.
+See the [doc](https://louloulibs.github.io/FinanceRoutines.jl/) for more options.
 
 
 ### Common operations in asset pricing
@@ -127,6 +127,6 @@ Other packages or sources of code I have used to process the WRDS data
 
 
 [docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
-[docs-stable-url]: https://eloualiche.github.io/FinanceRoutines.jl/
+[docs-stable-url]: https://louloulibs.github.io/FinanceRoutines.jl/
 [docs-latest-img]: https://img.shields.io/badge/docs-latest-blue.svg
-[docs-latest-url]: https://eloualiche.github.io/FinanceRoutines.jl/
+[docs-latest-url]: https://louloulibs.github.io/FinanceRoutines.jl/
