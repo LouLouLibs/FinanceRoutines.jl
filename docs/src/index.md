@@ -9,7 +9,7 @@ This is useful to get started with a clean copy of asset prices from CRSP and a 
 
 I have also added utilities to download treasury yield curves (GSW) and Fama-French research factors.
 
-This is still very much work in progress: file [issues](https://github.com/eloualiche/FinanceRoutines.jl/issues) for comments.
+This is still very much work in progress: file [issues](https://github.com/louloulibs/FinanceRoutines.jl/issues) for comments.
 
 
 ## Installation
@@ -19,7 +19,7 @@ You can install it from github  via
 
 ```julia
 import Pkg
-Pkg.add("https://github.com/eloualiche/FinanceRoutines.jl")
+Pkg.add("https://github.com/louloulibs/FinanceRoutines.jl")
 ```
 
 ## Usage

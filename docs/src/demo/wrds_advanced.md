@@ -15,7 +15,7 @@ using FinanceRoutines
 using DataFrames, DataPipes, Dates
 import LibPQ
 
-using Prototypes # see https://github.com/eloualiche/Prototypes.jl
+using BazerData # see https://github.com/louloulibs/BazerData.jl
 wrds_conn = FinanceRoutines.open_wrds_pg();
 ```
 
