@@ -15,7 +15,7 @@ This package provides tools to:
 ## Installation
 
 ```julia
-using FinanceRoutines; # Pkg.add(url="https://github.com/eloualiche/FinanceRoutines.jl")
+using FinanceRoutines; 
 ```
 
 ## Quick Start

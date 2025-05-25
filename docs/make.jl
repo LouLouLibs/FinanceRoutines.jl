@@ -29,12 +29,12 @@ makedocs(
 )
 
 deploydocs(
-    repo="github.com/eloualiche/FinanceRoutines.jl.git",
+    repo="github.com/louloulibs/FinanceRoutines.jl.git",
     target = "build",
 )
 
 deploydocs(;
-    repo="github.com/eloualiche/FinanceRoutines.jl.git",
+    repo="github.com/louloulibs/FinanceRoutines.jl.git",
     target = "build",
     branch = "gh-pages",
 )
