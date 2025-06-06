@@ -1131,7 +1131,7 @@ function add_returns!(df::DataFrame, maturity::Real;
     for col in param_cols
         lag_col = Symbol("lag_$col")
         transform!(df, [:date, col] => 
-                  ((dates, values) -> tlag(dates, values, time_step)) => 
+                  ((dates, values) -> tlag(values, dates; n=time_step)) => 
                   lag_col)
     end
     

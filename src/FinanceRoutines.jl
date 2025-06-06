@@ -2,15 +2,14 @@ module FinanceRoutines
 
 
 # --------------------------------------------------------------------------------------------------
-import Downloads
-import ZipFile
+import BazerData: tlag
 import CSV
 import DataFrames: AbstractDataFrame, AsTable, DataFrame, DataFrameRow, ByRow, groupby, nrow, passmissing, Not,
   rename!, select, select!, subset!, transform!, leftjoin, disallowmissing!
 import DataPipes: @p
 import Dates: Dates, Date, Day, Month, year
 import Decimals: Decimal
-import Downloads: Downloads.download
+import Downloads
 import FlexiJoins
 using FlexiJoins: by_key, by_pred
 import GLM: coef, lm
@@ -20,11 +19,10 @@ import LinearAlgebra: qr
 import Logging: Logging, with_logger, ConsoleLogger, @logmsg, Logging.Debug, Logging.Info, Logging.Warn, Logging.Error
 import Missings: Missings, missing, disallowmissing
 import PeriodicalDates: MonthlyDate
-import PanelShift: panellag!, tlag
-import ShiftedArrays: lag
 import Tables: columntable
 import WeakRefStrings: String3, String7, String15
-import ZipFile: ZipFile.Reader
+import ZipFile
+# import ZipFile: ZipFile.Reader
 # --------------------------------------------------------------------------------------------------
 
 
