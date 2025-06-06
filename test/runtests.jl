@@ -13,7 +13,8 @@ import DataPipes: @p
 # --------------------------------------------------------------------------------------------------
 const testsuite = [
     "KenFrench", 
-    "WRDS", "betas",
+    "WRDS", 
+    "betas",
     "Yields", 
 ]
 # --------------------------------------------------------------------------------------------------
@@ -21,7 +22,7 @@ const testsuite = [
 
 # --------------------------------------------------------------------------------------------------
 # To run file locally (where environment variables are not defined by CI)
-env_file = "../.env.gpg"
+env_file = "/Users/loulou/Documents/data/.env/.env.gpg"
 if isfile(env_file)
     io = IOBuffer(); run(pipeline(`which gpg`; stdout=io)); gpg_cmd = strip(String(take!(io)))
     io = IOBuffer();

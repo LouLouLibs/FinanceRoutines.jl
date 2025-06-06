@@ -189,8 +189,9 @@ function build_MSF!(
     # df_msf_mktcap_lag = @select(df_msf,
     #         :datem = :datem + Month(1), :permno, :l1m_mktcap2 = :mktcap)
     # df_msf = leftjoin(df_msf, df_msf_mktcap_lag, on = [:permno, :datem])
-    panellag!(df, :permno, :datem,
-        :mktcap, :l1m_mktcap, Month(1))
+    # panellag!(df, :permno, :datem, :mktcap, :l1m_mktcap, Month(1))
+    transform!(groupby(df, :permno), 
+        [:mktcap, :datem] => ( (v, t) -> tlag(v, t, n=Month(1)) ) => :l1m_mktcap)
 
 # Adjusted returns (see tidy finance following Bali, Engle, and Murray)
     transform!(df, 
