@@ -1,7 +1,7 @@
 name = "FinanceRoutines"
 uuid = "2e4c0fa2-b49b-4c8f-9592-485f04b9fc03"
 authors = ["Erik Loualiche <eloualic@umn.edu>"]
-version = "0.4.2"
+version = "0.4.3"
 
 [deps]
 BazerData = "d6d9bf1d-14ee-42c9-93f7-cccc2a9ff2c2"
