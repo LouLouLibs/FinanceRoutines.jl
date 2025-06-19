@@ -285,6 +285,34 @@
         @test !ismissing(df_mixed.yield_10y[2])  # 3-factor period
     end
 
+    @testset "Estimation of Yields (Excel function)" begin
+
+        # Test basic bond_yield calculation
+        @test FinanceRoutines.bond_yield(950, 1000, 0.05, 3.5, 2) ≈ 0.0663 atol=1e-3
+        # Test bond at par (price = face_value should yield ≈ coupon_rate)
+        @test FinanceRoutines.bond_yield(1000, 1000, 0.06, 5.0, 2) ≈ 0.06 atol=1e-4
+        # Test premium bond (price > face_value should yield < coupon_rate)
+        ytm_premium = FinanceRoutines.bond_yield(1050, 1000, 0.05, 10.0, 2)
+        @test ytm_premium < 0.05
+
+        # Test Excel API with provided example
+        settlement = Date(2008, 2, 15)
+        maturity = Date(2016, 11, 15)
+        ytm_excel = FinanceRoutines.bond_yield_excel(settlement, maturity, 0.0575, 95.04287, 100.0, 
+                                     frequency=2, basis=0)
+        @test ytm_excel ≈ 0.06 atol=5e-3 # this is not exactly same 
+
+        # Test Excel API consistency with direct bond_yield
+        years = 8.75  # approximate years between Feb 2008 to Nov 2016
+        ytm_direct = FinanceRoutines.bond_yield(95.04287, 100.0, 0.0575, years, 2)
+        @test ytm_excel ≈ ytm_direct atol=1e-2
+
+        # Test quarterly frequency
+        @test FinanceRoutines.bond_yield(980, 1000, 0.04, 2.0, 4) > 0.04  # discount bond
+        # Test annual frequency
+        @test FinanceRoutines.bond_yield(1020, 1000, 0.03, 5.0, 1) < 0.03  # premium bond
+    end
+
 end  # @testset "GSW Extended Test Suite"
 
 
