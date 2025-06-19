@@ -1352,8 +1352,8 @@ by the underlying `bond_yield()` function.
 - `settlement::Date`: Settlement date of the bond (when the bond is purchased)
 - `maturity::Date`: Maturity date of the bond (when principal is repaid)  
 - `rate::Real`: Annual coupon rate as a decimal (e.g., 0.0575 for 5.75%)
-- `price::Real`: Bond's price per \$100 of face value
-- `redemption::Real`: Redemption value per \$100 of face value (typically 100)
+- `price::Real`: Bond's price per 100 of face value
+- `redemption::Real`: Redemption value per 100 of face value (typically 100)
 
 # Keyword Arguments  
 - `frequency::Integer=2`: Number of coupon payments per year
@@ -1382,8 +1382,8 @@ using Dates
 settlement = Date(2008, 2, 15)    # 15-Feb-08 Settlement date
 maturity = Date(2016, 11, 15)     # 15-Nov-16 Maturity date  
 rate = 0.0575                     # 5.75% Percent coupon
-price = 95.04287                  # Price per \$100 face value
-redemption = 100.0                # \$100 Redemption value
+price = 95.04287                  # Price per 100 face value
+redemption = 100.0                # 100 Redemption value
 frequency = 2                     # Semiannual frequency
 basis = 0                         # 30/360 basis
 
@@ -1411,7 +1411,7 @@ ytm = bond_yield_excel(Date(2024, 3, 1), Date(2034, 3, 1),
 
 # Notes
 - Settlement date must be before maturity date
-- Price and redemption are typically quoted per \$100 of face value
+- Price and redemption are typically quoted per 100 of face value
 - The function uses `date_difference()` with `basis=1` (actual/actual) internally 
   for time calculation, then applies the specified basis for other calculations
 - Results should match Excel's YIELD function within numerical precision
@@ -1479,8 +1479,8 @@ The price calculation accounts for:
 
 # Examples
 ```julia
-# Calculate YTM for a 5% annual coupon bond, \$1000 face value, 3.5 years to maturity,
-# semi-annual payments, currently priced at \$950
+# Calculate YTM for a 5% annual coupon bond, 1000 face value, 3.5 years to maturity,
+# semi-annual payments, currently priced at 950
 ytm = bond_yield(950, 1000, 0.05, 3.5, 2)
 
 # 10-year quarterly coupon bond
