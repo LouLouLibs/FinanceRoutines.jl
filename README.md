@@ -101,7 +101,7 @@ transform!(df_GSW,
 ```
 
 See the [doc](https://louloulibs.github.io/FinanceRoutines.jl/) and tests for more options.
-
+ 
 
 ### Common operations in asset pricing
 
