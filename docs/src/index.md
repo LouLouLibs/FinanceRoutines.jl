@@ -28,7 +28,7 @@ Pkg.add("https://github.com/louloulibs/FinanceRoutines.jl")
     + See the [WRDS User Guide](@ref) for an introduction to using the package to download data from WRDS
 
   - Demos to how this integrates into standard estimations
-    + See how to estimate asset pricing betas in the [Estimating Beta](@ref) demo.
+    + See how to estimate asset pricing betas in the [Estimating Stock Betas](@ref) demo.
     + Build general queries for the WRDS postgres in [Advanced WRDS](@ref)
 
 ## Other Resources
