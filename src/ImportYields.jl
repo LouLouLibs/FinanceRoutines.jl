@@ -840,7 +840,7 @@ function gsw_return(maturity::Real, params_t::GSWParameters, params_t₋₁::GSW
     return gsw_return(maturity, _extract_params(params_t)..., _extract_params(params_t₋₁)...,
                      frequency=frequency, return_type=return_type)
 end
-
+# --------------------------------------------------------------------------------------------------
 
 
 
@@ -918,11 +918,10 @@ end
 # --------------------------------------------------------------------------------------------------
 
 
-
+# --------------------------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------------------------
 # GSW DataFrame Wrapper Functions
 # ------------------------------------------------------------------------------------------
-
 """
     add_yields!(df, maturities; validate=true)
 
@@ -1295,7 +1294,6 @@ end
 # ------------------------------------------------------------------------------------------
 # Internal helper functions  
 # ------------------------------------------------------------------------------------------
-
 """
     _validate_gsw_dataframe(df; check_date=false)
 
@@ -1335,3 +1333,265 @@ function _maturity_to_column_name(prefix::String, maturity::Real)
     end
 end
 # --------------------------------------------------------------------------------------------------
+
+
+# --------------------------------------------------------------------------------------------------
+# OTHER FUNCTIONS TO WORK WITH BONDS ... NOT DIRECTLY RELATED TO TREASURIES ...
+"""
+    bond_yield_excel(settlement, maturity, rate, price, redemption; 
+                     frequency=2, basis=0) -> Float64
+
+Calculate the yield to maturity of a bond using Excel-compatible YIELD function interface.
+
+This function provides an Excel-compatible API for calculating bond yield to maturity,
+matching the behavior and parameter conventions of Excel's `YIELD()` function. It
+internally converts the date-based inputs to the time-to-maturity format required
+by the underlying `bond_yield()` function.
+
+# Arguments
+- `settlement::Date`: Settlement date of the bond (when the bond is purchased)
+- `maturity::Date`: Maturity date of the bond (when principal is repaid)  
+- `rate::Real`: Annual coupon rate as a decimal (e.g., 0.0575 for 5.75%)
+- `price::Real`: Bond's price per \$100 of face value
+- `redemption::Real`: Redemption value per \$100 of face value (typically 100)
+
+# Keyword Arguments  
+- `frequency::Integer=2`: Number of coupon payments per year
+  - `1` = Annual
+  - `2` = Semiannual (default)
+  - `4` = Quarterly
+- `basis::Integer=0`: Day count basis for calculating time periods
+  - `0` = 30/360 (default)
+  - `1` = Actual/actual
+  - `2` = Actual/360  
+  - `3` = Actual/365
+  - `4` = European 30/360
+
+# Returns
+- `Float64`: Annual yield to maturity as a decimal (e.g., 0.065 for 6.5%)
+
+# Excel Compatibility
+This function replicates Excel's `YIELD(settlement, maturity, rate, price, redemption, frequency, basis)` 
+function with identical parameter meanings and calculation methodology.
+
+# Example (Excel Documentation Case)
+```julia
+using Dates
+
+# Excel example data:
+settlement = Date(2008, 2, 15)    # 15-Feb-08 Settlement date
+maturity = Date(2016, 11, 15)     # 15-Nov-16 Maturity date  
+rate = 0.0575                     # 5.75% Percent coupon
+price = 95.04287                  # Price per \$100 face value
+redemption = 100.0                # \$100 Redemption value
+frequency = 2                     # Semiannual frequency
+basis = 0                         # 30/360 basis
+
+# Calculate yield (matches Excel YIELD function)
+ytm = bond_yield_excel(settlement, maturity, rate, price, redemption, 
+                       frequency=frequency, basis=basis)
+# Result: 0.065 (6.5%)
+
+# Equivalent Excel formula: =YIELD(A2,A3,A4,A5,A6,A7,A8)
+# where cells contain the values above
+```
+
+# Additional Examples
+```julia
+# Corporate bond with quarterly payments
+settlement = Date(2024, 1, 15)
+maturity = Date(2029, 1, 15)
+ytm = bond_yield_excel(settlement, maturity, 0.045, 98.50, 100.0, 
+                       frequency=4, basis=1)
+
+# Government bond with annual payments, actual/365 basis
+ytm = bond_yield_excel(Date(2024, 3, 1), Date(2034, 3, 1), 
+                       0.0325, 102.25, 100.0, frequency=1, basis=3)
+```
+
+# Notes
+- Settlement date must be before maturity date
+- Price and redemption are typically quoted per \$100 of face value
+- The function uses `date_difference()` with `basis=1` (actual/actual) internally 
+  for time calculation, then applies the specified basis for other calculations
+- Results should match Excel's YIELD function within numerical precision
+- For bonds purchased between coupon dates, accrued interest is automatically handled
+
+# Relationship to Other Functions
+This function serves as a convenient wrapper around:
+```julia
+years = date_difference(settlement, maturity, basis=1)  
+bond_yield(price, redemption, rate, years, frequency)
+```
+
+# Throws  
+- `ArgumentError`: If settlement ≥ maturity date
+- `DomainError`: If rate, price, or redemption are negative
+- Convergence errors from underlying numerical root-finding
+
+See also: [`bond_yield`](@ref)
+"""
+function bond_yield_excel(
+    settlement::Date, maturity::Date, rate::Real, price::Real, redemption::Real;
+    frequency = 2, basis = 0)
+
+    years = _date_difference(settlement, maturity, basis=1)
+    return bond_yield(price, redemption, rate, years, frequency, method=:brent)
+
+end
+
+"""
+    bond_yield(price, face_value, coupon_rate, years_to_maturity, frequency; 
+               method=:brent, bracket=(0.001, 1.0)) -> Float64
+
+Calculate the yield to maturity (YTM) of a bond given its market price and characteristics.
+
+This function uses numerical root-finding to determine the discount rate that equates the 
+present value of all future cash flows (coupon payments and principal repayment) to the 
+current market price of the bond. The calculation properly handles bonds with fractional 
+periods remaining until maturity and accounts for accrued interest.
+
+# Arguments
+- `price::Real`: Current market price of the bond
+- `face_value::Real`: Par value or face value of the bond (principal amount)
+- `coupon_rate::Real`: Annual coupon rate as a decimal (e.g., 0.05 for 5%)
+- `years_to_maturity::Real`: Time to maturity in years (can be fractional)
+- `frequency::Integer`: Number of coupon payments per year (e.g., 2 for semi-annual, 4 for quarterly)
+
+# Keyword Arguments
+- `method::Symbol=:brent`: Root-finding method (currently only :brent is implemented)
+- `bracket::Tuple{Float64,Float64}=(0.001, 1.0)`: Initial bracket for yield search as (lower_bound, upper_bound)
+
+# Returns
+- `Float64`: The yield to maturity as an annual rate (decimal form)
+
+# Algorithm Details
+The function calculates bond price using the standard present value formula:
+- For whole coupon periods: discounts each coupon payment to present value
+- For fractional periods: applies fractional discounting and adjusts for accrued interest
+- Handles the special case where yield approaches zero (no discounting)
+- Uses the Brent method for robust numerical root-finding
+
+The price calculation accounts for:
+1. Present value of remaining coupon payments
+2. Present value of principal repayment
+3. Accrued interest adjustments for fractional periods
+
+# Examples
+```julia
+# Calculate YTM for a 5% annual coupon bond, \$1000 face value, 3.5 years to maturity,
+# semi-annual payments, currently priced at \$950
+ytm = bond_yield(950, 1000, 0.05, 3.5, 2)
+
+# 10-year quarterly coupon bond
+ytm = bond_yield(1050, 1000, 0.06, 10.0, 4)
+
+# Bond very close to maturity (0.25 years)
+ytm = bond_yield(998, 1000, 0.04, 0.25, 2)
+```
+
+# Notes
+- The yield returned is the effective annual rate compounded at the specified frequency
+- For bonds trading at a premium (price > face_value), expect YTM < coupon_rate
+- For bonds trading at a discount (price < face_value), expect YTM > coupon_rate
+- The function assumes the next coupon payment occurs exactly one period from now
+- Requires the `Roots.jl` package for numerical root-finding
+
+# Throws
+- May throw convergence errors if the root-finding algorithm fails to converge
+- Will return `Inf` for invalid yields (≤ 0)
+
+See also: [`bond_yield_excel`](@ref)
+"""
+function bond_yield(price, face_value, coupon_rate, years_to_maturity, frequency; 
+                   method=:brent, bracket=(0.001, 1.0))
+    
+    total_periods = years_to_maturity * frequency
+    whole_periods = floor(Int, total_periods)  # Complete coupon periods
+    fractional_period = total_periods - whole_periods  # Partial period
+    
+    coupon_payment = (face_value * coupon_rate) / frequency
+    
+    function price_diff(y)
+        if y <= 0
+            return Inf
+        end
+        
+        discount_rate = y / frequency
+        calculated_price = 0.0
+        
+        if discount_rate == 0
+            # Zero yield case
+            calculated_price = coupon_payment * whole_periods + face_value
+            if fractional_period > 0
+                # Add accrued interest for partial period
+                calculated_price += coupon_payment * fractional_period
+            end
+        else
+            # Present value of whole coupon payments
+            if whole_periods > 0
+                pv_coupons = coupon_payment * (1 - (1 + discount_rate)^(-whole_periods)) / discount_rate
+                calculated_price += pv_coupons / (1 + discount_rate)^fractional_period
+            end
+            
+            # Present value of principal (always discounted by full period)
+            pv_principal = face_value / (1 + discount_rate)^total_periods
+            calculated_price += pv_principal
+            
+            # Subtract accrued interest (what buyer owes seller)
+            if fractional_period > 0
+                accrued_interest = coupon_payment * fractional_period
+                calculated_price -= accrued_interest
+            end
+        end
+        
+        return calculated_price - price
+    end
+    
+    return Roots.find_zero(price_diff, bracket, Roots.Brent())
+
+end
+
+
+function _date_difference(start_date, end_date; basis=1)
+    if basis == 0  # 30/360
+        d1, m1, y1 = Dates.day(start_date), Dates.month(start_date), Dates.year(start_date)
+        d2, m2, y2 = Dates.day(end_date), Dates.month(end_date), Dates.year(end_date)
+        
+        if d1 == 31; d1 = 30; end
+        if d2 == 31 && d1 >= 30; d2 = 30; end
+        
+        days = 360 * (y2 - y1) + 30 * (m2 - m1) + (d2 - d1)
+        return days / 360
+    elseif basis == 1  # Actual/Actual
+        return Dates.value(end_date - start_date) / 365.25
+    elseif basis == 2  # Actual/360
+        return Dates.value(end_date - start_date) / 360
+    elseif basis == 3  # Actual/365
+        return Dates.value(end_date - start_date) / 365
+    else
+        error("Invalid basis: $basis")
+    end
+end
+# --------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

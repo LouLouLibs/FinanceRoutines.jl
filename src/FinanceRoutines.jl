@@ -19,6 +19,7 @@ import LinearAlgebra: qr
 import Logging: Logging, with_logger, ConsoleLogger, @logmsg, Logging.Debug, Logging.Info, Logging.Warn, Logging.Error
 import Missings: Missings, missing, disallowmissing
 import PeriodicalDates: MonthlyDate
+import Roots
 import Tables: columntable
 import WeakRefStrings: String3, String7, String15
 import ZipFile
