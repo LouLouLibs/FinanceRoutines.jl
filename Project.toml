@@ -30,6 +30,7 @@ BazerData = "0.7.4"
 CSV = "0.10"
 DataFrames = "1"
 Roots = "2.2.7"
+Statistics = "1"
 julia = "1"
 
 [extras]
