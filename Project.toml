@@ -29,6 +29,7 @@ ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
 BazerData = "0.7.4"
 CSV = "0.10"
 DataFrames = "1"
+Missings = "1"
 Roots = "2.2.7"
 julia = "1"
 
