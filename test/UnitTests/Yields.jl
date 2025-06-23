@@ -311,15 +311,14 @@
         @test FinanceRoutines.bond_yield(980, 1000, 0.04, 2.0, 4) > 0.04  # discount bond
         # Test annual frequency
         @test FinanceRoutines.bond_yield(1020, 1000, 0.03, 5.0, 1) < 0.03  # premium bond
+        # Test case where Brent initially failed due to non-bracketing intervals
+        @test FinanceRoutines.bond_yield_excel(Date("2014-04-24"), Date("2015-12-01"), 0.04, 105.46, 100.0, frequency=2) ≈ 0.0057 atol=5e-4
+        # Two tests with fractional years
+        @test FinanceRoutines.bond_yield_excel(Date("2013-10-08"), Date("2020-09-01"), 0.05, 116.76, 100.0; frequency=2) ≈ 0.0235 atol=5e-4
+        @test FinanceRoutines.bond_yield_excel(Date("2014-07-31"), Date("2032-05-15"), 0.05, 114.083, 100.0; frequency=2) ≈ 0.0389 atol=5e-4
     end
 
 end  # @testset "GSW Extended Test Suite"
-
-
-
-
-
-
 
 
 
