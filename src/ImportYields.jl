@@ -1547,8 +1547,18 @@ function bond_yield(price, face_value, coupon_rate, years_to_maturity, frequency
         
         return calculated_price - price
     end
-    
-    return Roots.find_zero(price_diff, bracket, Roots.Brent())
+
+    try
+        return Roots.find_zero(price_diff, bracket, Roots.Brent())
+    catch e
+        if isa(e, ArgumentError) && occursin("not a bracketing interval", sprint(showerror, e))
+            # Fall back to a derivative-free method using an initial guess
+            @warn "Brent failed: falling back to Order1" exception=e
+            return Roots.find_zero(price_diff, 0.02, Roots.Order1())
+        else
+            rethrow(e)
+        end
+    end
 
 end
 
