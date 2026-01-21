@@ -17,15 +17,14 @@ end
     Open a Postgres connection on WRDS server
 """
 function open_wrds_pg(user::AbstractString, password::AbstractString)
-    wrds_conn = Connection(
-        """
-            host = wrds-pgdata.wharton.upenn.edu
-            port = 9737
-            user='$user'
-            password='$password'
-            sslmode = 'require' dbname = wrds
-        """
-    )
+    conn_str = """
+        host = wrds-pgdata.wharton.upenn.edu
+        port = 9737
+        user='$user'
+        password='$password'
+        sslmode = 'require' dbname = wrds
+    """
+    wrds_conn = Connection(conn_str)
     return wrds_conn
 end
 
