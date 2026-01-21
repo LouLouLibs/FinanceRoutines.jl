@@ -74,7 +74,7 @@ function import_FF3(;frequency::Symbol=:monthly)
 
         http_response = Downloads.download(url_FF_mth_yr);
         z = ZipFile.Reader(http_response) ;
-        a_file_in_zip = filter(x -> match(r".*csv", lowercase(x.name)) != nothing, z.files)[1]
+        a_file_in_zip = filter(x -> match(r".*csv", lowercase(x.name)) != nothing, z.files)[1]       
         df_FF3 = copy(_parse_ff_annual(a_file_in_zip, types=ff_col_classes))
         close(z)
         return df_FF3
@@ -87,7 +87,7 @@ function import_FF3(;frequency::Symbol=:monthly)
         a_file_in_zip = filter(x -> match(r".*csv", lowercase(x.name)) != nothing, z.files)[1]
         df_FF3 = copy(_parse_ff_monthly(a_file_in_zip, types=ff_col_classes))
         close(z)
-
+        
         transform!(df_FF3, :datem => ByRow(x -> MonthlyDate(x, "yyyymm")) => :datem)
         return df_FF3
 
@@ -122,7 +122,7 @@ function _parse_ff_annual(zip_file; types=nothing)
     
     # Read all lines from the zip file entry
     file_lines = split(String(read(zip_file)), '\n')
-    
+   
     for line in file_lines
         if occursin(r"Annual Factors", line)
             found_annual = true
@@ -136,14 +136,15 @@ function _parse_ff_annual(zip_file; types=nothing)
             end
             
             if occursin(r"^\s*$", line) || occursin(r"[A-Za-z]{3,}", line[1:min(10, length(line))])
-                if !occursin(r"^\s*$", line) && !occursin(r"^\d{4}", line)
+                if !occursin(r"^\s*$", line) && !occursin(r"^\s*\d{4}", line) # Added \s*
                     break
                 end
                 continue
             end
             
-            if occursin(r"^\d{4}", line)
-                push!(lines, line)
+            if occursin(r"^\s*\d{4}", line) 
+                clean_line = replace(line, r"[\r]" => "") 
+                push!(lines, clean_line)
             end
         end
     end
@@ -152,8 +153,8 @@ function _parse_ff_annual(zip_file; types=nothing)
         error("Annual Factors section not found in file")
     end
     
-    buffer = IOBuffer(join(lines, "\n"))
-    return CSV.File(buffer, header=false, delim=",", ntasks=1, types=types) |> DataFrame |>
+    lines_buffer = IOBuffer(join(lines, "\n"))
+    return CSV.File(lines_buffer, header=false, delim=",", ntasks=1, types=types) |> DataFrame |>
            df -> rename!(df, [:datey, :mktrf, :smb, :hml, :rf])
 end
 # --------------------------------------------------------------------------------------------------
@@ -162,10 +163,9 @@ end
 # --------------------------------------------------------------------------------------------------
 function _parse_ff_monthly(zip_file; types=nothing)
     
-
     # Read all lines from the zip file entry
     file_lines = split(String(read(zip_file)), '\n')
-    skipto = 5
+    skipto = 6
 
     # Collect data lines until we hit "Annual Factors"
     data_lines = String[]

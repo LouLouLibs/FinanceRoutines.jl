@@ -1,7 +1,7 @@
 name = "FinanceRoutines"
 uuid = "2e4c0fa2-b49b-4c8f-9592-485f04b9fc03"
 authors = ["Erik Loualiche <eloualic@umn.edu>"]
-version = "0.4.3"
+version = "0.4.4"
 
 [deps]
 BazerData = "d6d9bf1d-14ee-42c9-93f7-cccc2a9ff2c2"
@@ -26,11 +26,22 @@ WeakRefStrings = "ea10d353-3f73-51f8-a26c-33c1cb351aa5"
 ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
 
 [compat]
-BazerData = "0.7.4"
+BazerData = "0.7"
 CSV = "0.10"
-DataFrames = "1"
-Roots = "2.2.7"
-julia = "1"
+DataFrames = "1.6"
+DataPipes = "0.3"
+Decimals = "0.4"
+FlexiJoins = "0.1"
+GLM = "1.9"
+IntervalSets = "0.7"
+LibPQ = "1.17"
+Missings = "1"
+PeriodicalDates = "2"
+Roots = "2.2"
+Tables = "1.10"
+WeakRefStrings = "1.4"
+ZipFile = "0.10"
+julia = "1.10"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

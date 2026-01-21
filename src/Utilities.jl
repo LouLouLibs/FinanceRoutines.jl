@@ -34,10 +34,13 @@ function open_wrds_pg()
     print("Enter WRDS username: ")
     user = readline()
     password_buffer = Base.getpass("Enter WRDS password")
-    # con = open_wrds_pg(user, String(password_buffer.data[1:password_buffer.size]));
-    con = open_wrds_pg(user, read(password_buffer, String))
+    password_bytes = copy(password_buffer.data[1:password_buffer.size])
     Base.shred!(password_buffer)
-    return con
+    try
+        return open_wrds_pg(user, String(password_bytes))
+    finally
+        fill!(password_bytes, 0x00)  # zero out the password bytes
+    end
 end
 # --------------------------------------------------------------------------------------------------
 
