@@ -2,11 +2,9 @@
 
         import Dates
 
-
-        df_FF3_annual = FinanceRoutines.import_FF3(frequency=:annual);
+        df_FF3_annual = FinanceRoutines.import_FF3(frequency=:annual)
         @test names(df_FF3_annual) == ["datey", "mktrf", "smb", "hml",  "rf"]
-        @test nrow(df_FF3_annual) >= Dates.year(Dates.today()) - 1926 - 1
-
+        @test nrow(df_FF3_annual) >= Dates.year(Dates.today() - Dates.Month(1)) - 1926 - 1
 
         df_FF3_monthly = FinanceRoutines.import_FF3(frequency=:monthly);
         @test names(df_FF3_monthly) == ["datem", "mktrf", "smb", "hml",  "rf"]

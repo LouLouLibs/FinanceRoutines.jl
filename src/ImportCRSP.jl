@@ -386,14 +386,14 @@ function import_MSF_v2(wrds_conn::Connection;
     @log_msg "# -- GETTING StkSecurityInfoHist (CIZ)"
     # stksecurityinfo = _get_postgres_columns("crsp", "stksecurityinfohist"; wrds_conn=wrds_conn)
     stksecurityinfo_cols = vcat(
-        ["PERMNO", "SecInfoStartDt", "SecInfoEndDt", "IssuerNm", "ShareClass", 
+        ["PERMNO", "SecInfoStartDt", "SecInfoEndDt", "IssuerNm", "ShareClass",
          "PrimaryExch", "TradingStatusFlg", "NAICS", "SICCD", "HDRCUSIP"],
-        uppercase.(variables)) |> filter(!isempty) |> unique 
-    stksecurityinfo = _get_postgres_columns("crsp", "stksecurityinfohist"; wrds_conn=wrds_conn,
+        uppercase.(variables)) |> filter(!isempty) |> unique
+    stksecurityinfo_cols = _get_postgres_columns("crsp", "stksecurityinfohist"; wrds_conn=wrds_conn,
         prior_columns = stksecurityinfo_cols) |> sort
-    stksecurityinfo_cols = join(uppercase.(stksecurityinfo_cols), ", ")
+    stksecurityinfo_query = join(stksecurityinfo_cols, ", ")
 
-    postgre_query_stksecurityinfo = "SELECT $stksecurityinfo_cols FROM crsp.stksecurityinfohist"
+    postgre_query_stksecurityinfo = "SELECT $stksecurityinfo_query FROM crsp.stksecurityinfohist"
     df_stksecurityinfo = execute(wrds_conn, postgre_query_stksecurityinfo) |> DataFrame;
     transform!(df_stksecurityinfo,
         names(df_stksecurityinfo, check_integer.(eachcol(df_stksecurityinfo))) .=> 
@@ -411,6 +411,8 @@ function import_MSF_v2(wrds_conn::Connection;
 
 
     # ----------------------------------------------------------------------------------------------
+    # only include siccd/naics if they exist in the DataFrame
+    optional_cols = intersect([:siccd, :naics], Symbol.(names(df_msf_v2)))
     var_select = vcat(
         :permno,   # Security identifier
         :mthcaldt, # Date of the observation
@@ -420,17 +422,17 @@ function import_MSF_v2(wrds_conn::Connection;
         :mthprc,
         :mthcap,
         :mthprevcap,
-        # :mthvol, :mthprcvol # volume and price volume        
-        :siccd, # Industry code
-        :naics, # Industry code
+        # :mthvol, :mthprcvol # volume and price volume
+        optional_cols,
         Symbol.(intersect(variables, names(df_msf_v2)))
     )
 
-    @p df_msf_v2 |> select!(__, var_select) |> sort!(__, [:permno, :mthcaldt]) |> 
-        disallowmissing!(__, [:mthcaldt]) 
-    transform!(df_msf_v2, 
-        :naics => (x -> replace(x, "0" => missing)) => :naics,
-        :mthcaldt => ByRow(MonthlyDate) => :datem)
+    @p df_msf_v2 |> select!(__, var_select) |> sort!(__, [:permno, :mthcaldt]) |>
+        disallowmissing!(__, [:mthcaldt])
+    if "naics" in names(df_msf_v2)
+        transform!(df_msf_v2, :naics => (x -> replace(x, "0" => missing)) => :naics)
+    end
+    transform!(df_msf_v2, :mthcaldt => ByRow(MonthlyDate) => :datem)
     # ----------------------------------------------------------------------------------------------
 
 
