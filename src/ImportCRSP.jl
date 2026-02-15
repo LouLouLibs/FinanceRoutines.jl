@@ -61,9 +61,9 @@ function import_MSF(wrds_conn::Connection;
     postgre_query_msf = """
         SELECT $msf_columns
             FROM crsp.msf
-            WHERE DATE >= '$(string(date_range[1]))' AND DATE <= '$(string(date_range[2]))'
+            WHERE DATE >= \$1 AND DATE <= \$2
     """
-    res_q_msf = execute(wrds_conn, postgre_query_msf)
+    res_q_msf = execute(wrds_conn, postgre_query_msf, (date_range[1], date_range[2]))
     df_msf = DataFrame(columntable(res_q_msf))
     transform!(df_msf,     # clean up the dataframe
         names(df_msf, check_integer.(eachcol(df_msf))) .=> (x->convert.(Union{Missing, Int}, x));
@@ -136,13 +136,9 @@ function import_MSF(;
     variables::Vector{String} = [""],
     user::AbstractString = "", password::AbstractString = "")
 
-    if user == ""
-        wrds_conn = open_wrds_pg()
-    else
-        wrds_conn = open_wrds_pg(user, password)
+    with_wrds_connection(user=user, password=password) do conn
+        import_MSF(conn; date_range=date_range, variables=variables)
     end
-    import_MSF(wrds_conn, date_range=date_range, variables=variables)
-
 end
 # ------------------------------------------------------------------------------------------
 
@@ -172,10 +168,9 @@ function build_MSF!(
     verbose::Bool=false
     )
 
- # Check that all necessary variables are in
-    ["mktcap", "shrout", "prc", "permno", "datem", "dlstcd", "ret", "dlret",
-     "cfacpr", "cfacshr"]
-
+    required = ["shrout", "prc", "permno", "datem", "dlstcd", "ret", "dlret"]
+    missing_cols = setdiff(required, names(df))
+    !isempty(missing_cols) && throw(ArgumentError("Missing required columns: $(join(missing_cols, ", "))"))
 
 # Create marketcap:
     transform!(df, [:shrout, :prc] => ByRow( (s,p) -> s * abs(p) ) => :mktcap)
@@ -316,12 +311,12 @@ function import_MSF_v2(wrds_conn::Connection;
     postgre_query_msf = """
     SELECT $(join(col_query, ", "))
         FROM crsp.msf_v2
-        WHERE MTHCALDT >= '$(string(date_range[1]))' AND MTHCALDT <= '$(string(date_range[2]))'
-          AND SHARETYPE = 'NS' AND SECURITYTYPE = 'EQTY' AND SECURITYSUBTYPE = 'COM' 
+        WHERE MTHCALDT >= \$1 AND MTHCALDT <= \$2
+          AND SHARETYPE = 'NS' AND SECURITYTYPE = 'EQTY' AND SECURITYSUBTYPE = 'COM'
           AND USINCFLG = 'Y' AND ISSUERTYPE IN ('ACOR', 'CORP')
           AND PRIMARYEXCH IN ('N', 'A', 'Q') AND CONDITIONALTYPE = 'RW' AND TRADINGSTATUSFLG = 'A'
     """
-    df_msf_v2 = execute(wrds_conn, postgre_query_msf) |> DataFrame;
+    df_msf_v2 = execute(wrds_conn, postgre_query_msf, (date_range[1], date_range[2])) |> DataFrame;
 
     transform!(df_msf_v2,     # clean up the dataframe
         names(df_msf_v2, check_integer.(eachcol(df_msf_v2))) .=> (x->convert.(Union{Missing, Int}, x));
@@ -443,27 +438,6 @@ end
 
 
 # ------------------------------------------------------------------------------------------
-"""
-    build_MSF_v2(df_msf::DataFrame; save, trim_cols, clean_cols, verbose)
-
-Clean up the CRSP Monthly Stock File (see `import_MSF`)
-
-# Arguments
-- `df::DataFrame`: A standard dataframe with compustat data (minimum variables are in `import_Funda`)
-
-# Keywords
-- `save::String`: Save a gzip version of the data on path `\$save/funda.csv.gz`; Default does not save the data.
-- `trim_cols::Bool`: Only keep a subset of relevant columns in the final dataset
-- `clean_cols::Bool`: Clean up the columns of the dataframe to be of type Float64; Default is `false` and leaves the Decimal type intact
-- `logging_level::Symbol`: How to log results
-
-
-# Returns
-- `df::DataFrame`: DataFrame with crsp MSF file "cleaned"
-"""
-#= 
-REDUNDANT WITH NEW FILES
-=#
 # --------------------------------------------------------------------------------------------------
 
 
@@ -479,9 +453,9 @@ function import_DSF(wrds_conn::Connection;
     postgre_query_dsf = """
         SELECT PERMNO, DATE, RET, PRC, SHROUT, VOL
             FROM crsp.dsf
-            WHERE DATE >= '$(string(date_range[1]))' AND DATE <= '$(string(date_range[2]))'
+            WHERE DATE >= \$1 AND DATE <= \$2
     """
-    df_dsf = execute(wrds_conn, postgre_query_dsf) |> DataFrame
+    df_dsf = execute(wrds_conn, postgre_query_dsf, (date_range[1], date_range[2])) |> DataFrame
     # clean up the dataframe
     transform!(df_dsf,
         names(df_dsf, check_integer.(eachcol(df_dsf))) .=> (x->convert.(Union{Missing, Int}, x));
@@ -490,19 +464,14 @@ function import_DSF(wrds_conn::Connection;
     return df_dsf
 end
 
-# when there are no connections establisheds
+# when there are no connections established
 function import_DSF(;
     date_range::Tuple{Date, Date} = (Date("1900-01-01"), Dates.today()),
-    variables::AbstractString = "",
     user::AbstractString = "", password::AbstractString = "")
 
-    if user == ""
-        wrds_conn = open_wrds_pg()
-    else
-        wrds_conn = open_wrds_pg(user, password)
+    with_wrds_connection(user=user, password=password) do conn
+        import_DSF(conn; date_range=date_range)
     end
-
-    return import_DSF(wrds_conn, date_range=date_range, variables=variables)
 end
 # ------------------------------------------------------------------------------------------
 
@@ -523,9 +492,9 @@ function import_DSF_v2(wrds_conn::Connection;
     postgre_query_dsf = """
     SELECT PERMNO, DLYCALDT, DLYRET, DLYPRC, DLYVOL, DLYCAP
         FROM crsp.stkdlysecuritydata
-        WHERE DLYCALDT >= '$(string(date_range[1]))' AND DLYCALDT <= '$(string(date_range[2]))'
+        WHERE DLYCALDT >= \$1 AND DLYCALDT <= \$2
     """
-    df_dsf_v2 = execute(wrds_conn, postgre_query_dsf) |> DataFrame
+    df_dsf_v2 = execute(wrds_conn, postgre_query_dsf, (date_range[1], date_range[2])) |> DataFrame
 
     # clean up the dataframe
     transform!(df_dsf_v2,
@@ -537,21 +506,15 @@ function import_DSF_v2(wrds_conn::Connection;
     return df_dsf_v2
 end
 
-# when there are no connections establisheds
+# when there are no connections established
 function import_DSF_v2(;
     date_range::Tuple{Date, Date} = (Date("1900-01-01"), Dates.today()),
-    variables::AbstractString = "",
-    user::AbstractString = "", password::AbstractString = "",
-    logging_level::Symbol = :debug, # either none, debug, info etc... tbd 
-    )
+    logging_level::Symbol = :debug,
+    user::AbstractString = "", password::AbstractString = "")
 
-    if user == ""
-        wrds_conn = open_wrds_pg()
-    else
-        wrds_conn = open_wrds_pg(user, password)
+    with_wrds_connection(user=user, password=password) do conn
+        import_DSF_v2(conn; date_range=date_range, logging_level=logging_level)
     end
-
-    return import_DSF_v2(wrds_conn, date_range=date_range, variables=variables, logging_level=logging_level)
 end
 # ------------------------------------------------------------------------------------------
 
@@ -567,37 +530,40 @@ end
 # """
 # postgres_res = execute(wrds_conn, postgres_query, (table_schema,))
 function _get_postgres_columns(table_schema, table_name; wrds_conn, prior_columns::Vector{String} = [""])
-    
-    # download potential columns
-    postgres_query= """
-        SELECT *
+
+    # Parameterized query to prevent SQL injection
+    postgres_query = """
+        SELECT column_name
           FROM information_schema.columns
-         WHERE table_schema = '$table_schema'
-           AND table_name   = '$table_name'
-             ;
+         WHERE table_schema = \$1
+           AND table_name   = \$2
         """
 
-    postgres_res = execute(wrds_conn, postgres_query)
-    postgres_columns = DataFrame(columntable(postgres_res)).column_name ;
+    postgres_res = execute(wrds_conn, postgres_query, (table_schema, table_name))
+    postgres_columns = DataFrame(columntable(postgres_res)).column_name
     if isempty(prior_columns) || prior_columns == [""]
         return uppercase.(postgres_columns)
-    else 
+    else
         return intersect(uppercase.(postgres_columns), uppercase.(prior_columns))
     end
 end 
 
 
 function _get_postgres_table(table_schema, table_name; wrds_conn, prior_columns::Vector{String} = [""])
-    
+
     if isempty(prior_columns) || prior_columns == [""]
         columns = "*"
-    else 
+    else
+        # Column names are validated against schema when used with _get_postgres_columns
         columns = join(uppercase.(prior_columns), ", ")
     end
 
+    # Quote identifiers to prevent SQL injection
+    schema_q = replace(table_schema, "\"" => "\"\"")
+    table_q = replace(table_name, "\"" => "\"\"")
     postgres_query = """
         SELECT $columns
-        FROM $table_schema.$table_name
+        FROM \"$schema_q\".\"$table_q\"
     """
 
     postgres_res = execute(wrds_conn, postgres_query)
