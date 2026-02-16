@@ -10,7 +10,7 @@
 
 # --------------------------------------------------------------------------------------------------
 """
-    calculate_rolling_betas(y, x; window=60)
+    calculate_rolling_betas(X, y; window=60, min_data=nothing, method=:linalg)
 
 Calculate rolling betas using `window` months of returns.
 """

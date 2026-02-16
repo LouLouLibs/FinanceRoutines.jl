@@ -29,7 +29,7 @@ postgre_query_columns= """
     WHERE table_schema = 'crsp'
       AND table_name   = 'StkSecurityInfoHist';
 """
-msenames_columns = @p LibPQ.execute(wrds_conn, postgre_query_msenames_columns) |> 
+msenames_columns = @p LibPQ.execute(wrds_conn, postgre_query_columns) |>
     DataFrame |> __.column_name |> sort 
 ```
 

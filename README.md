@@ -80,7 +80,7 @@ This downloads directly data from Ken French's website and formats the data
 ```julia
 df_FF3 = import_FF3()
 # there is an option to download the daily factors
-df_FF3_daily = import_FF3(:daily)
+df_FF3_daily = import_FF3(frequency=:daily)
 ```
 
 ### Estimate treasury bond returns

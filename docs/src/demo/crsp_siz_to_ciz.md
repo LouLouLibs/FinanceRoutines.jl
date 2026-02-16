@@ -16,7 +16,7 @@ These tables are available from the WRDS postgres server
 
 ```julia
 using FinanceRoutines
-using DataPipes, DataFrames, DataFramesMeta, DataPipes
+using DataPipes, DataFrames, DataFramesMeta
 import LibPQ: LibPQ.execute, LibPQ.Connection # to connect directly to the server
 import Tables: columntable
 
@@ -25,7 +25,7 @@ see(df) = show(df, allcols=true, allrows=true, truncate=0) # to view df without 
 ```
 
 ```julia
-const get_postgres_table = FinanceRoutines.get_postgres_table
+const get_postgres_table = FinanceRoutines._get_postgres_table
 # main table for converting columns
 siz_to_ciz = get_postgres_table("crsp", "metasiztociz"; wrds_conn=wrds_conn) |> DataFrame 
 # flag information
@@ -164,9 +164,8 @@ stock_info_hist_subset = @rsubset(stock_info_hist,
     groupby(__, [:shrcd, :sharetype, :securitytype, :securitysubtype, :usincflg, :issuertype]) |>
     combine(__, nrow)
 ```
-!!There still seems to be some discrepancy!!
-If we do not want to worry, we simply use the [CRSP cross reference guide](https://www.crsp.org/wp-content/uploads/guides/CRSP_Cross_Reference_Guide_1.0_to_2.0.pdf) which leads us to this [mapping table](https://www.crsp.org/wp-content/uploads/ShareCode.html
-)
+There still seems to be some discrepancy in the mapping.
+If we do not want to worry, we simply use the [CRSP cross reference guide](https://www.crsp.org/wp-content/uploads/guides/CRSP_Cross_Reference_Guide_1.0_to_2.0.pdf) which leads us to this [mapping table](https://www.crsp.org/wp-content/uploads/ShareCode.html).
 
 
 ### Exchange Filters

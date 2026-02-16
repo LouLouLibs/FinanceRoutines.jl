@@ -28,11 +28,6 @@ makedocs(
     ]
 )
 
-deploydocs(
-    repo="github.com/louloulibs/FinanceRoutines.jl.git",
-    target = "build",
-)
-
 deploydocs(;
     repo="github.com/louloulibs/FinanceRoutines.jl.git",
     target = "build",
