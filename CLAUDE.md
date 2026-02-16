@@ -17,6 +17,11 @@ FinanceRoutines.jl — Julia package for financial data (WRDS/CRSP, Compustat, F
    - **Compat.toml**: Update if compat bounds changed
    - Can update via GitHub API (`gh api ... -X PUT`) without cloning
 
+## Commits
+
+- CI runs WRDS tests which are slow and costly. Add `[skip ci]` to commit messages when changes don't affect code (docs, README, CLAUDE.md, comments, etc.)
+- Only let CI run when changes touch `src/`, `test/`, or `Project.toml`
+
 ## Testing
 
 ```bash
