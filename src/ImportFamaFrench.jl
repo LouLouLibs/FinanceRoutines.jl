@@ -162,34 +162,43 @@ end
 
 # --------------------------------------------------------------------------------------------------
 function _parse_ff_monthly(zip_file; types=nothing)
-    
+
     # Read all lines from the zip file entry
     file_lines = split(String(read(zip_file)), '\n')
-    skipto = 6
+
+    # Find the first data line (starts with digits, like "192607")
+    # instead of hardcoding a skip count that breaks if the header changes
+    skipto = 1
+    for (i, line) in enumerate(file_lines)
+        if occursin(r"^\s*\d{6}", line)
+            skipto = i
+            break
+        end
+    end
 
     # Collect data lines until we hit "Annual Factors"
     data_lines = String[]
-    
+
     for i in skipto:length(file_lines)
         line = file_lines[i]
-        
+
         # Stop when we hit Annual Factors section
         if occursin(r"Annual Factors", line)
             break
         end
-        
+
         # Skip empty lines
         if occursin(r"^\s*$", line)
             continue
         end
-        
+
         # Add non-empty data lines
         push!(data_lines, line)
     end
-    
+
     # Create IOBuffer with header + data
     buffer = IOBuffer(join(data_lines, "\n"))
-    
+
     return CSV.File(buffer, header=false, delim=",", ntasks=1, types=types) |> DataFrame |>
            df -> rename!(df, [:datem, :mktrf, :smb, :hml, :rf])
 

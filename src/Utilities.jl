@@ -41,6 +41,28 @@ function open_wrds_pg()
         fill!(password_bytes, 0x00)  # zero out the password bytes
     end
 end
+
+
+"""
+    with_wrds_connection(f; user="", password="")
+
+Open a WRDS PostgreSQL connection, execute `f(conn)`, and ensure the connection is closed.
+
+# Examples
+```julia
+df = with_wrds_connection(user="myuser", password="mypwd") do conn
+    import_MSF(conn; date_range=(Date("2020-01-01"), Date("2023-12-31")))
+end
+```
+"""
+function with_wrds_connection(f::Function; user::AbstractString="", password::AbstractString="")
+    conn = user == "" ? open_wrds_pg() : open_wrds_pg(user, password)
+    try
+        return f(conn)
+    finally
+        close(conn)
+    end
+end
 # --------------------------------------------------------------------------------------------------
 
 

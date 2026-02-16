@@ -110,13 +110,9 @@ end
 function import_ccm_link(;
     user::String = "", password::String = "")
 
-    if user == ""
-        wrds_conn = open_wrds_pg()
-    else
-        wrds_conn = open_wrds_pg(user, password)
+    with_wrds_connection(user=user, password=password) do conn
+        import_ccm_link(conn)
     end
-
-   return  import_ccm_link(wrds_conn)
 end
 # --------------------------------------------------------------------------------------------------
 

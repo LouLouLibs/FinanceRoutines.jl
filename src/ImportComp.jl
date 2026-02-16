@@ -50,22 +50,15 @@ function import_Funda(wrds_conn::Connection;
     size(var_check, 1) > 0 && (@warn "Queried variables not in dataset ... : $(join(var_check, ","))")
     filter!(in(compd_funda), var_funda)
 
-    # set up the query for funda
-    postgre_query_funda_full = """
-        SELECT *
-            FROM comp.funda
-            WHERE INDFMT = 'INDL' AND DATAFMT = 'STD' AND CONSOL = 'C' AND POPSRC = 'D'
-                AND DATADATE >= '$(string(date_range[1]))'
-                AND DATADATE <= '$(string(date_range[2]))'
-    """
-    postgre_query_funda_var = """
+    # set up the query for funda (dates parameterized to prevent SQL injection)
+    postgre_query_funda = """
         SELECT $(join(unique(var_funda), ","))
             FROM comp.funda
             WHERE INDFMT = 'INDL' AND DATAFMT = 'STD' AND CONSOL = 'C' AND POPSRC = 'D'
-                AND DATADATE >= '$(string(date_range[1]))'
-                AND DATADATE <= '$(string(date_range[2]))'
+                AND DATADATE >= \$1
+                AND DATADATE <= \$2
     """
-    res_q_funda = execute(wrds_conn, postgre_query_funda_var)
+    res_q_funda = execute(wrds_conn, postgre_query_funda, (date_range[1], date_range[2]))
     df_funda = DataFrame(columntable(res_q_funda))
 
     # run the filter
@@ -89,13 +82,9 @@ function import_Funda(;
     filter_variables::Dict{Symbol,Any}=Dict(:CURCD => "USD"),
     user::String="", password::String="")
 
-    if user == ""
-        wrds_conn = open_wrds_pg()
-    else
-        wrds_conn = open_wrds_pg(user, password)
+    with_wrds_connection(user=user, password=password) do conn
+        import_Funda(conn; date_range=date_range, variables=variables)
     end
-
-    import_Funda(wrds_conn, date_range=date_range, variables=variables)
 end
 # ------------------------------------------------------------------------------------------
 

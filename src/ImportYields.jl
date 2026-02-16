@@ -46,36 +46,34 @@ println("Slope: ", params.β₁)
 - Can be constructed from DataFrameRow for convenience
 """
 struct GSWParameters
-    β₀::Union{Float64, Missing}  # Level
-    β₁::Union{Float64, Missing}  # Slope  
-    β₂::Union{Float64, Missing}  # Curvature 1
+    β₀::Float64                  # Level
+    β₁::Float64                  # Slope
+    β₂::Float64                  # Curvature 1
     β₃::Union{Float64, Missing}  # Curvature 2 (may be missing for 3-factor model)
-    τ₁::Union{Float64, Missing}  # Decay 1 (must be positive when present)
+    τ₁::Float64                  # Decay 1 (must be positive)
     τ₂::Union{Float64, Missing}  # Decay 2 (may be missing for 3-factor model)
-    
+
     # Inner constructor with validation
+    # Returns `missing` (not a GSWParameters) when core fields are missing
     function GSWParameters(β₀, β₁, β₂, β₃, τ₁, τ₂)
 
-        # Check if core parameters are missing
+        # Check if core parameters are missing — return missing instead of constructing
         if ismissing(β₀) || ismissing(β₁) || ismissing(β₂) || ismissing(τ₁)
             return missing
         end
 
-        # Validate that non-missing decay parameters are positive
-        if !ismissing(τ₁) && τ₁ <= 0
-            throw(ArgumentError("First decay parameter τ₁ must be positive when present, got τ₁=$τ₁"))
+        # Validate that decay parameters are positive
+        if τ₁ <= 0
+            throw(ArgumentError("First decay parameter τ₁ must be positive, got τ₁=$τ₁"))
         end
         if !ismissing(τ₂) && τ₂ <= 0
             throw(ArgumentError("Second decay parameter τ₂ must be positive when present, got τ₂=$τ₂"))
         end
-        
-        # Convert to appropriate types
+
         new(
-            ismissing(β₀) ? missing : Float64(β₀),
-            ismissing(β₁) ? missing : Float64(β₁), 
-            ismissing(β₂) ? missing : Float64(β₂),
+            Float64(β₀), Float64(β₁), Float64(β₂),
             ismissing(β₃) ? missing : Float64(β₃),
-            ismissing(τ₁) ? missing : Float64(τ₁), 
+            Float64(τ₁),
             ismissing(τ₂) ? missing : Float64(τ₂)
         )
     end
@@ -421,14 +419,9 @@ function gsw_yield(maturity::Real,
     if maturity <= 0
         throw(ArgumentError("Maturity must be positive, got $maturity"))
     end
-    
-    # Handle any missing values
-    if any(ismissing, [β₀, β₁, β₂, β₃, τ₁, τ₂])
-        return missing
-    end
-    
+
     # For 3-factor model compatibility: if β₃ is 0 or very small, skip the fourth term
-    use_four_factor = !ismissing(β₃) && abs(β₃) > 1e-10 && !ismissing(τ₂) && τ₂ > 0
+    use_four_factor = abs(β₃) > 1e-10 && τ₂ > 0
     
     # Nelson-Siegel-Svensson formula
     t = Float64(maturity)
@@ -1195,24 +1188,64 @@ function add_excess_returns!(df::DataFrame, maturity::Real;
     if validate
         _validate_gsw_dataframe(df, check_date=true)
     end
-    
-    # Add regular returns first (will be cleaned up)
-    temp_df = copy(df)
-    add_returns!(temp_df, maturity, frequency=frequency, return_type=return_type, validate=false)
-    add_returns!(temp_df, risk_free_maturity, frequency=frequency, return_type=return_type, validate=false)
-    
-    # Calculate excess returns
-    bond_ret_col = Symbol(string(_maturity_to_column_name("ret", maturity)) * "_" * string(frequency))
-    rf_ret_col = Symbol(string(_maturity_to_column_name("ret", risk_free_maturity)) * "_" * string(frequency))
+
+    if maturity <= 0
+        throw(ArgumentError("Maturity must be positive, got $maturity"))
+    end
+
+    valid_frequencies = [:daily, :monthly, :annual]
+    if frequency ∉ valid_frequencies
+        throw(ArgumentError("frequency must be one of $valid_frequencies, got $frequency"))
+    end
+
+    valid_return_types = [:log, :arithmetic]
+    if return_type ∉ valid_return_types
+        throw(ArgumentError("return_type must be one of $valid_return_types, got $return_type"))
+    end
+
+    # Sort by date to ensure proper time series order
+    sort!(df, :date)
+
+    # Determine time step based on frequency
+    time_step = if frequency == :daily
+        Day(1)
+    elseif frequency == :monthly
+        Day(30)
+    elseif frequency == :annual
+        Day(360)
+    end
+
+    # Create lagged parameter columns once (shared for both bond and rf returns)
+    param_cols = [:BETA0, :BETA1, :BETA2, :BETA3, :TAU1, :TAU2]
+    for col in param_cols
+        lag_col = Symbol("lag_$col")
+        transform!(df, [:date, col] =>
+                  ((dates, values) -> tlag(values, dates; n=time_step)) =>
+                  lag_col)
+    end
+
+    # Calculate excess return directly in a single pass
     excess_col = Symbol(string(_maturity_to_column_name("excess_ret", maturity)) * "_" * string(frequency))
-    
-    transform!(temp_df, [bond_ret_col, rf_ret_col] => 
-              ByRow((bond_ret, rf_ret) -> ismissing(bond_ret) || ismissing(rf_ret) ? missing : bond_ret - rf_ret) =>
-              excess_col)
-    
-    # Add only the excess return column to original DataFrame
-    df[!, excess_col] = temp_df[!, excess_col]
-    
+
+    transform!(df,
+        AsTable(vcat(param_cols, [Symbol("lag_$col") for col in param_cols])) =>
+        ByRow(params -> begin
+            current = GSWParameters(params.BETA0, params.BETA1, params.BETA2,
+                                    params.BETA3, params.TAU1, params.TAU2)
+            lagged = GSWParameters(params.lag_BETA0, params.lag_BETA1, params.lag_BETA2,
+                                   params.lag_BETA3, params.lag_TAU1, params.lag_TAU2)
+            if ismissing(current) || ismissing(lagged)
+                missing
+            else
+                gsw_excess_return(maturity, current, lagged;
+                                  risk_free_maturity=risk_free_maturity,
+                                  frequency=frequency, return_type=return_type)
+            end
+        end) => excess_col)
+
+    # Clean up temporary lagged columns
+    select!(df, Not([Symbol("lag_$col") for col in param_cols]))
+
     return df
 end
 # --------------------------------------------------------------------------------------------------
@@ -1412,21 +1445,11 @@ ytm = bond_yield_excel(Date(2024, 3, 1), Date(2034, 3, 1),
 # Notes
 - Settlement date must be before maturity date
 - Price and redemption are typically quoted per 100 of face value
-- The function uses `date_difference()` with `basis=1` (actual/actual) internally 
-  for time calculation, then applies the specified basis for other calculations
+- Uses actual coupon dates and the specified day-count basis, matching Excel's computation
 - Results should match Excel's YIELD function within numerical precision
-- For bonds purchased between coupon dates, accrued interest is automatically handled
 
-# Relationship to Other Functions
-This function serves as a convenient wrapper around:
-```julia
-years = date_difference(settlement, maturity, basis=1)  
-bond_yield(price, redemption, rate, years, frequency)
-```
-
-# Throws  
+# Throws
 - `ArgumentError`: If settlement ≥ maturity date
-- `DomainError`: If rate, price, or redemption are negative
 - Convergence errors from underlying numerical root-finding
 
 See also: [`bond_yield`](@ref)
@@ -1435,9 +1458,70 @@ function bond_yield_excel(
     settlement::Date, maturity::Date, rate::Real, price::Real, redemption::Real;
     frequency = 2, basis = 0)
 
-    years = _date_difference(settlement, maturity, basis=1)
-    return bond_yield(price, redemption, rate, years, frequency, method=:brent)
+    if settlement >= maturity
+        throw(ArgumentError("Settlement ($settlement) must be before maturity ($maturity)"))
+    end
 
+    # Compute coupon schedule by working backwards from maturity
+    period_months = div(12, frequency)
+
+    # Find next coupon date after settlement
+    next_coupon = maturity
+    while next_coupon - Month(period_months) > settlement
+        next_coupon -= Month(period_months)
+    end
+    prev_coupon = next_coupon - Month(period_months)
+
+    # Count remaining coupons (from next_coupon to maturity, inclusive)
+    N = 0
+    d = next_coupon
+    while d <= maturity
+        N += 1
+        d += Month(period_months)
+    end
+
+    # Day count fractions using the specified basis
+    A   = _day_count_days(prev_coupon, settlement, basis)   # accrued days
+    E   = _day_count_days(prev_coupon, next_coupon, basis)   # days in coupon period
+    DSC = E - A                                              # Excel defines DSC = E - A to ensure consistency
+
+    α = DSC / E   # fraction of period until next coupon
+    coupon = redemption * rate / frequency
+
+    # Excel's YIELD pricing formula
+    function price_from_yield(y)
+        if y <= 0
+            return Inf
+        end
+
+        dr = y / frequency
+
+        if N == 1
+            # Special case: single remaining coupon
+            return (redemption + coupon) / (1 + α * dr) - coupon * A / E
+        end
+
+        # General case: N > 1 coupons
+        # PV of coupon annuity: ∑(k=1..N) coupon/(1+dr)^(k-1+α) = coupon*(1+dr)^(1-α)/dr * [1-(1+dr)^(-N)]
+        pv_coupons = coupon * (1 + dr)^(1 - α) * (1 - (1 + dr)^(-N)) / dr
+        # PV of redemption
+        pv_redemption = redemption / (1 + dr)^(N - 1 + α)
+        # Subtract accrued interest
+        return pv_coupons + pv_redemption - coupon * A / E
+    end
+
+    price_diff(y) = price_from_yield(y) - price
+
+    try
+        return Roots.find_zero(price_diff, (1e-6, 2.0), Roots.Brent())
+    catch e
+        if isa(e, ArgumentError) && occursin("not a bracketing interval", sprint(showerror, e))
+            @warn "Brent failed: falling back to Order1" exception=e
+            return Roots.find_zero(price_diff, rate, Roots.Order1())
+        else
+            rethrow(e)
+        end
+    end
 end
 
 """
@@ -1563,22 +1647,46 @@ function bond_yield(price, face_value, coupon_rate, years_to_maturity, frequency
 end
 
 
+"""
+    _day_count_days(d1, d2, basis) -> Int
+
+Count the number of days between two dates using the specified day-count convention.
+Used internally for bond yield calculations.
+
+- `basis=0`: 30/360 (US)
+- `basis=1`: Actual/actual
+- `basis=2`: Actual/360
+- `basis=3`: Actual/365
+- `basis=4`: European 30/360
+"""
+function _day_count_days(d1::Date, d2::Date, basis::Int)
+    if basis == 0  # 30/360 US
+        day1, mon1, yr1 = Dates.day(d1), Dates.month(d1), Dates.year(d1)
+        day2, mon2, yr2 = Dates.day(d2), Dates.month(d2), Dates.year(d2)
+        if day1 == 31; day1 = 30; end
+        if day2 == 31 && day1 >= 30; day2 = 30; end
+        return 360 * (yr2 - yr1) + 30 * (mon2 - mon1) + (day2 - day1)
+    elseif basis == 4  # European 30/360
+        day1, mon1, yr1 = Dates.day(d1), Dates.month(d1), Dates.year(d1)
+        day2, mon2, yr2 = Dates.day(d2), Dates.month(d2), Dates.year(d2)
+        if day1 == 31; day1 = 30; end
+        if day2 == 31; day2 = 30; end
+        return 360 * (yr2 - yr1) + 30 * (mon2 - mon1) + (day2 - day1)
+    else  # basis 1, 2, 3: actual days
+        return Dates.value(d2 - d1)
+    end
+end
+
 function _date_difference(start_date, end_date; basis=1)
-    if basis == 0  # 30/360
-        d1, m1, y1 = Dates.day(start_date), Dates.month(start_date), Dates.year(start_date)
-        d2, m2, y2 = Dates.day(end_date), Dates.month(end_date), Dates.year(end_date)
-        
-        if d1 == 31; d1 = 30; end
-        if d2 == 31 && d1 >= 30; d2 = 30; end
-        
-        days = 360 * (y2 - y1) + 30 * (m2 - m1) + (d2 - d1)
+    days = _day_count_days(start_date, end_date, basis)
+    if basis == 0
         return days / 360
-    elseif basis == 1  # Actual/Actual
-        return Dates.value(end_date - start_date) / 365.25
-    elseif basis == 2  # Actual/360
-        return Dates.value(end_date - start_date) / 360
-    elseif basis == 3  # Actual/365
-        return Dates.value(end_date - start_date) / 365
+    elseif basis == 1
+        return days / 365.25
+    elseif basis == 2
+        return days / 360
+    elseif basis == 3
+        return days / 365
     else
         error("Invalid basis: $basis")
     end
