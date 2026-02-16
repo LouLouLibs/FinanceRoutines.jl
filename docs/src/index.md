@@ -14,9 +14,16 @@ This is still very much work in progress: file [issues](https://github.com/loulo
 
 ## Installation
 
-`FinanceRoutines.jl` is a not yet a registered package.
-You can install it from github  via
+`FinanceRoutines.jl` is a registered package in the [`loulouJL`](https://github.com/LouLouLibs/loulouJL) registry.
+You can install it via the Julia package manager:
 
+```julia
+using Pkg
+pkg"registry add https://github.com/LouLouLibs/loulouJL.git"
+Pkg.add("FinanceRoutines")
+```
+
+Or install directly from GitHub:
 ```julia
 import Pkg
 Pkg.add("https://github.com/louloulibs/FinanceRoutines.jl")
@@ -26,6 +33,10 @@ Pkg.add("https://github.com/louloulibs/FinanceRoutines.jl")
 
   - Using WRDS (CRSP, Compustat, etc)
     + See the [WRDS User Guide](@ref) for an introduction to using the package to download data from WRDS
+    + See [Transitioning to the new CRSP file format](@ref) for a guide on converting from SIZ to CIZ
+
+  - Treasury yield curves
+    + See the [Import Yield Curve Data](@ref) guide for GSW yield curve parameters and bond return calculations
 
   - Demos to how this integrates into standard estimations
     + See how to estimate asset pricing betas in the [Estimating Stock Betas](@ref) demo.

@@ -150,10 +150,10 @@ end
 Clean up the CRSP Monthly Stock File (see `import_MSF`)
 
 # Arguments
-- `df::DataFrame`: A standard dataframe with compustat data (minimum variables are in `import_Funda`)
+- `df::DataFrame`: A standard dataframe with CRSP MSF data (minimum variables are in `import_MSF`)
 
 # Keywords
-- `save::String`: Save a gzip version of the data on path `\$save/funda.csv.gz`; Default does not save the data.
+- `save::String`: Save a gzip version of the data on path `\$save/msf.csv.gz`; Default does not save the data.
 - `trim_cols::Bool`: Only keep a subset of relevant columns in the final dataset
 - `clean_cols::Bool`: Clean up the columns of the dataframe to be of type Float64; Default is `false` and leaves the Decimal type intact
 

@@ -109,9 +109,9 @@ insertcols!(df_msf, :a=>missing, :bMKT=>missing, :bSMB=>missing, :bHML=>missing)
 end
 
 import Statistics: median, mean
-@p df_msf |> groupby(__, :datem) |> 
-    combine(__, :bMKT .=> 
-        [(x-> emptymissing(mean)(skipmissing(x))) (x-> emptymissing(median)(skipmissing(x)))] .=>
+@p df_msf |> groupby(__, :datem) |>
+    combine(__, :bMKT .=>
+        [(x-> mean(skipmissing(x))) (x-> median(skipmissing(x)))] .=>
         [:bMKT_mean :bMKT_median])
 ```
 Go make some coffee ... this takes a little while (~ 15mn on M2max macbook pro). 

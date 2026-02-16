@@ -205,7 +205,6 @@ stats = combine(
 ```
 
 
-## API
 ## Data Source
 
 GSW yield curve parameters are downloaded from the Federal Reserve Economic Data (FRED):
