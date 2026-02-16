@@ -300,7 +300,7 @@
         maturity = Date(2016, 11, 15)
         ytm_excel = FinanceRoutines.bond_yield_excel(settlement, maturity, 0.0575, 95.04287, 100.0, 
                                      frequency=2, basis=0)
-        @test ytm_excel ≈ 0.06 atol=5e-3 # this is not exactly same 
+        @test ytm_excel ≈ 0.065 atol=5e-4 # Excel YIELD returns 0.065 (6.5%)
 
         # Test Excel API consistency with direct bond_yield
         years = 8.75  # approximate years between Feb 2008 to Nov 2016
