@@ -2,6 +2,9 @@
 
     import Dates: Date, Day
     import Statistics: mean
+    import Random: seed!
+
+    seed!(42)  # deterministic random draws
 
     # Build synthetic daily returns panel: 2 firms, 300 trading days
     dates = Date("2010-01-04"):Day(1):Date("2011-04-01")
@@ -20,9 +23,10 @@
     mkt_returns = 0.0005 .+ 0.008 .* randn(n)
     df_ret.mktrf = vcat(mkt_returns, mkt_returns)
 
-    # Inject a positive event: +5% abnormal return on event day for firm 1
+    # Inject a large positive event: +20% abnormal return on event day for firm 1
+    # Must be large enough to dominate cumulative noise over the 21-day event window
     event_idx_firm1 = 270  # well within bounds for estimation window
-    df_ret.ret[event_idx_firm1] += 0.05
+    df_ret.ret[event_idx_firm1] += 0.20
 
     events = DataFrame(
         permno = [1, 2],
@@ -39,8 +43,8 @@
         @test !ismissing(result.car[1])
         @test !ismissing(result.car[2])
         @test result.n_obs[1] == 21  # -10 to +10 inclusive
-        # Firm 1 should have positive CAR (we injected +5%)
-        @test result.car[1] > 0.03
+        # Firm 1 should have positive CAR (we injected +20%)
+        @test result.car[1] > 0.10
     end
 
     # ---- Market model ----
