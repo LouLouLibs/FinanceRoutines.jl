@@ -14,6 +14,7 @@ The package provides functions to:
   - Import GSW yield curves from the [Federal Reserve](https://www.federalreserve.gov/pubs/feds/2006/200628/200628abs.html) and compute bond returns
   - Estimate rolling betas for stocks
   - Calculate equal-weighted and value-weighted portfolio returns
+  - Run event studies (CARs, BHARs) with standard abnormal return models
   - Run data quality diagnostics on financial DataFrames
 
 ## Installation
@@ -129,6 +130,22 @@ report = diagnose(df_msf)
 report[:missing_rates]      # fraction missing per column
 report[:duplicate_keys]     # duplicate (permno, date) pairs
 report[:suspicious_values]  # extreme returns, negative prices
+```
+
+### Event studies (experimental)
+
+> **Note:** `event_study` is experimental and has not been extensively validated against established implementations. Use with caution and verify results independently.
+
+```julia
+events = DataFrame(permno=[10001, 10002], event_date=[Date("2010-06-15"), Date("2011-03-20")])
+
+# Market-adjusted CARs and BHARs (default)
+results = event_study(events, df_msf)
+
+# Market model with custom windows
+results = event_study(events, df_msf;
+    event_window=(-5, 5), estimation_window=(-252, -21),
+    model=:market_model)
 ```
 
 ### Common operations in asset pricing

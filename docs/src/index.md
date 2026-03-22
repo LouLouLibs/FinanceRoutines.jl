@@ -45,6 +45,7 @@ Pkg.add("https://github.com/louloulibs/FinanceRoutines.jl")
   - Portfolio analytics
     + `calculate_portfolio_returns` — equal/value-weighted returns with optional grouping
     + `calculate_rolling_betas` — rolling window factor regressions
+    + `event_study` — CARs and BHARs with market-adjusted, market model, or mean-adjusted methods (experimental)
     + `diagnose` — missing rates, duplicates, suspicious values
 
   - Demos
