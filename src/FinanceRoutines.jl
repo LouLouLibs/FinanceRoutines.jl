@@ -39,6 +39,7 @@ include("ImportCRSP.jl")
 include("ImportComp.jl")
 include("Merge_CRSP_Comp.jl")
 include("PortfolioUtils.jl")
+include("Diagnostics.jl")
 # --------------------------------------------------------------------------------------------------
 
 
@@ -70,6 +71,7 @@ export link_MSF
 # More practical functions
 export calculate_rolling_betas
 export calculate_portfolio_returns
+export diagnose
 # --------------------------------------------------------------------------------------------------
 
 
