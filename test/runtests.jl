@@ -30,7 +30,7 @@ if isfile(env_file)
     env_WRDS = String(take!(io))
     # populate the environment variables
     for line in split(env_WRDS, "\n")
-        !startswith(line, "#") || continue
+        startswith(line, "#") && continue
         isempty(strip(line)) && continue
         if contains(line, "=")
             key, value = split(line, "=", limit=2)
