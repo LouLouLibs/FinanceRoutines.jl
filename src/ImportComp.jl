@@ -38,17 +38,19 @@ function import_Funda(wrds_conn::Connection;
     filter_variables=Dict(:CURCD => "USD")  # if you want something fanciers ... export variable and do it later
 )
 
+    date_range = _validate_date_range(date_range; earliest=Date("1950-01-01"))
+
     var_funda = ["GVKEY", "DATADATE", "SICH", "FYR", "FYEAR",
         "AT", "LT", "SALE", "EBITDA", "CAPX", "NI", "DV", "CEQ", "CEQL", "SEQ",
         "TXDITC", "TXP", "TXDB", "ITCB", "DVT", "PSTK", "PSTKL", "PSTKRV"]
     !isnothing(variables) && append!(var_funda, uppercase.(variables))
     !isnothing(filter_variables) && append!(var_funda, uppercase.(string.(keys(filter_variables))))
 
-    # TODO WE SHOULD PROBABLY KEEP SOMEWHERE AS DATA THE LIST OF VALID COLUMNS
-    # THEN THROW A WARNING IF IT DOESNT FIT
-    var_check = setdiff(var_funda, compd_funda)
-    size(var_check, 1) > 0 && (@warn "Queried variables not in dataset ... : $(join(var_check, ","))")
-    filter!(in(compd_funda), var_funda)
+    # Validate variables against actual schema (falls back to hardcoded list)
+    valid_cols = _get_funda_columns(wrds_conn)
+    var_check = setdiff(var_funda, valid_cols)
+    !isempty(var_check) && (@warn "Queried variables not in comp.funda: $(join(var_check, ", "))")
+    filter!(in(valid_cols), var_funda)
 
     # set up the query for funda (dates parameterized to prevent SQL injection)
     postgre_query_funda = """
@@ -159,6 +161,33 @@ end
 
 
 # ------------------------------------------------------------------------------------------
+# Session cache for funda columns — queried once per session, falls back to hardcoded list
+const _funda_columns_cache = Ref{Vector{String}}()
+
+"""
+    _get_funda_columns(wrds_conn) -> Vector{String}
+
+Get valid column names for comp.funda. Queries the schema at runtime and caches
+for the session. Falls back to the hardcoded `compd_funda` list on error.
+"""
+function _get_funda_columns(wrds_conn)
+    if isassigned(_funda_columns_cache)
+        return _funda_columns_cache[]
+    end
+    try
+        cols = _get_postgres_columns("comp", "funda"; wrds_conn=wrds_conn)
+        _funda_columns_cache[] = cols
+        return cols
+    catch e
+        @warn "Could not query comp.funda schema, using hardcoded variable list" exception=(e, catch_backtrace())
+        return compd_funda
+    end
+end
+# ------------------------------------------------------------------------------------------
+
+
+# ------------------------------------------------------------------------------------------
+# Hardcoded fallback list of comp.funda columns (last verified: 2025-02)
 const compd_funda = [
     "GVKEY", "DATADATE", "FYEAR", "INDFMT", "CONSOL", "POPSRC", "DATAFMT", "TIC", "CUSIP", "CONM", 
     "ACCTCHG", "ACCTSTD", "ACQMETH", "ADRR", "AJEX", "AJP", "BSPR", "COMPST", "CURCD", "CURNCD", 

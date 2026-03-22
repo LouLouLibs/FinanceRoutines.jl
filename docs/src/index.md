@@ -4,12 +4,10 @@
 
 ## Introduction
 
-This package provides a collection of routines for academic finance work. 
-This is useful to get started with a clean copy of asset prices from CRSP and a ad-hoc merge with the accounting data from the Compustat Funda file. 
+This package provides a collection of routines for academic finance work.
+It gives you a clean pipeline from raw WRDS data (CRSP, Compustat) through to standard research datasets, plus tools for Fama-French factors, treasury yield curves, portfolio construction, and data diagnostics.
 
-I have also added utilities to download treasury yield curves (GSW) and Fama-French research factors.
-
-This is still very much work in progress: file [issues](https://github.com/louloulibs/FinanceRoutines.jl/issues) for comments.
+File [issues](https://github.com/louloulibs/FinanceRoutines.jl/issues) for comments.
 
 
 ## Installation
@@ -31,16 +29,27 @@ Pkg.add("https://github.com/louloulibs/FinanceRoutines.jl")
 
 ## Usage
 
-  - Using WRDS (CRSP, Compustat, etc)
-    + See the [WRDS User Guide](@ref) for an introduction to using the package to download data from WRDS
-    + See [Transitioning to the new CRSP file format](@ref) for a guide on converting from SIZ to CIZ
+  - WRDS (CRSP, Compustat)
+    + [WRDS User Guide](@ref) — download and merge CRSP/Compustat data
+    + [Transitioning to the new CRSP file format](@ref) — SIZ to CIZ migration
+
+  - Fama-French factors
+    + `import_FF3()` — 3-factor model (market, size, value)
+    + `import_FF5()` — 5-factor model (adds profitability, investment)
+    + `import_FF_momentum()` — momentum factor
+    + All support `:daily`, `:monthly`, `:annual` frequencies
 
   - Treasury yield curves
-    + See the [Import Yield Curve Data](@ref) guide for GSW yield curve parameters and bond return calculations
+    + [Import Yield Curve Data](@ref) — GSW parameters, yields, prices, bond returns
 
-  - Demos to how this integrates into standard estimations
-    + See how to estimate asset pricing betas in the [Estimating Stock Betas](@ref) demo.
-    + Build general queries for the WRDS postgres in [Advanced WRDS](@ref)
+  - Portfolio analytics
+    + `calculate_portfolio_returns` — equal/value-weighted returns with optional grouping
+    + `calculate_rolling_betas` — rolling window factor regressions
+    + `diagnose` — missing rates, duplicates, suspicious values
+
+  - Demos
+    + [Estimating Stock Betas](@ref) — unconditional and rolling betas
+    + [Advanced WRDS](@ref) — custom Postgres queries
 
 ## Other Resources
 

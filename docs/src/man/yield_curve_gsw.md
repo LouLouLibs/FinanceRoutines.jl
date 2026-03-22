@@ -174,7 +174,7 @@ The package automatically detects which model to use based on available paramete
 
 ## Missing Data Handling
 
-- Automatically converts `-999` flag values to `missing`
+- Automatically converts common flag values to `missing`: `-999.99`, `-999`, `-9999`, `-99.99`
 - Gracefully handles periods with missing τ₂/β₃ parameters
 - Propagates missing values through calculations appropriately
 
