@@ -6,7 +6,17 @@ on:
       - main
     tags:
       - "*"
-  pull_request: null
+    paths:
+      - "src/**"
+      - "test/**"
+      - "Project.toml"
+      - ".github/workflows/CI.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "test/**"
+      - "Project.toml"
+      - ".github/workflows/CI.yml"
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
@@ -26,6 +36,7 @@ jobs:
           - nightly
         os:
           - ubuntu-latest
+          - macos-latest
         arch:
           - x64
     steps:
