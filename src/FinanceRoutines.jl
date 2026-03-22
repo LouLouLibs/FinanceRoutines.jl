@@ -4,8 +4,8 @@ module FinanceRoutines
 # --------------------------------------------------------------------------------------------------
 import BazerData: tlag
 import CSV
-import DataFrames: AbstractDataFrame, AsTable, DataFrame, DataFrameRow, ByRow, groupby, nrow, passmissing, Not,
-  rename!, select, select!, subset, subset!, transform!, leftjoin, disallowmissing!
+import DataFrames: AbstractDataFrame, AsTable, DataFrame, DataFrameRow, ByRow, combine, groupby, ncol, nrow,
+  passmissing, Not, rename!, select, select!, subset, subset!, transform!, leftjoin, unique, disallowmissing!
 import DataPipes: @p
 import Dates: Dates, Date, Day, Month, year
 import Decimals: Decimal
@@ -19,6 +19,7 @@ import LinearAlgebra: qr
 import Missings: Missings, missing, disallowmissing
 import PeriodicalDates: MonthlyDate
 import Roots
+import Statistics: mean
 import Tables: columntable
 import WeakRefStrings: String3, String7, String15
 import ZipFile
@@ -37,6 +38,7 @@ include("BondPricing.jl")
 include("ImportCRSP.jl")
 include("ImportComp.jl")
 include("Merge_CRSP_Comp.jl")
+include("PortfolioUtils.jl")
 # --------------------------------------------------------------------------------------------------
 
 
@@ -67,6 +69,7 @@ export link_MSF
 
 # More practical functions
 export calculate_rolling_betas
+export calculate_portfolio_returns
 # --------------------------------------------------------------------------------------------------
 
 
