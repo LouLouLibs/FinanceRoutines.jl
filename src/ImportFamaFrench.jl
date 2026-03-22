@@ -9,10 +9,14 @@
 
 
 # --------------------------------------------------------------------------------------------------
-# List of exported functions
-# export import_FF3             # read monthly FF3
+# Shared helper: download a Ken French zip and extract the CSV entry
 # --------------------------------------------------------------------------------------------------
-
+function _download_ff_zip(url)
+    http_response = Downloads.download(url)
+    z = ZipFile.Reader(http_response)
+    csv_file = filter(x -> match(r".*csv", lowercase(x.name)) !== nothing, z.files)[1]
+    return (z, csv_file)
+end
 
 
 # --------------------------------------------------------------------------------------------------
@@ -21,13 +25,13 @@
 
 Import Fama-French 3-factor model data directly from Ken French's data library.
 
-Downloads and parses the Fama-French research data factors (market risk premium, 
+Downloads and parses the Fama-French research data factors (market risk premium,
 size factor, value factor, and risk-free rate) at the specified frequency.
 
 # Arguments
 - `frequency::Symbol=:monthly`: Data frequency to import. Options are:
   - `:monthly` - Monthly factor returns (default)
-  - `:annual` - Annual factor returns  
+  - `:annual` - Annual factor returns
   - `:daily` - Daily factor returns
 
 # Returns
@@ -37,7 +41,7 @@ size factor, value factor, and risk-free rate) at the specified frequency.
 
 Where:
 - `mktrf`: Market return minus risk-free rate (market risk premium)
-- `smb`: Small minus big (size factor) 
+- `smb`: Small minus big (size factor)
 - `hml`: High minus low (value factor)
 - `rf`: Risk-free rate
 
@@ -64,110 +68,113 @@ daily_ff = import_FF3(frequency=:daily)
 Kenneth R. French Data Library: https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html
 """
 function import_FF3(;frequency::Symbol=:monthly)
+    url_mth_yr = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_CSV.zip"
+    url_daily  = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_daily_CSV.zip"
+    col_types  = [String7, Float64, Float64, Float64, Float64]
 
-    ff_col_classes = [String7, Float64, Float64, Float64, Float64];
-    url_FF_mth_yr = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_CSV.zip"
-    url_FF_daily  = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_daily_CSV.zip"
-
-    # ----------------------------------------------------------------------------------------------
-    if frequency==:annual
-
-        http_response = Downloads.download(url_FF_mth_yr);
-        z = ZipFile.Reader(http_response) ;
-        a_file_in_zip = filter(x -> match(r".*csv", lowercase(x.name)) != nothing, z.files)[1]       
-        df_FF3 = copy(_parse_ff_annual(a_file_in_zip, types=ff_col_classes))
-        close(z)
-        return df_FF3
-
-    # ----------------------------------------------------------------------------------------------
-    elseif frequency==:monthly
-
-        http_response = Downloads.download(url_FF_mth_yr);
-        z = ZipFile.Reader(http_response) ;
-        a_file_in_zip = filter(x -> match(r".*csv", lowercase(x.name)) != nothing, z.files)[1]
-        df_FF3 = copy(_parse_ff_monthly(a_file_in_zip, types=ff_col_classes))
-        close(z)
-        
-        transform!(df_FF3, :datem => ByRow(x -> MonthlyDate(x, "yyyymm")) => :datem)
-        return df_FF3
-
-
-    # ----------------------------------------------------------------------------------------------
-    elseif frequency==:daily
-        
-        http_response = Downloads.download(url_FF_daily);
-        z = ZipFile.Reader(http_response) ;
-        a_file_in_zip = filter(x -> match(r".*csv", lowercase(x.name)) != nothing, z.files)[1]
-        df_FF3 = copy(CSV.File(a_file_in_zip, header=4, footerskip=1) |> DataFrame);
-        close(z)
-        rename!(df_FF3, [:date, :mktrf, :smb, :hml, :rf]);
-        df_FF3 = @p df_FF3 |> filter(.!ismissing.(_.date) && .!ismissing.(_.mktrf))
-        transform!(df_FF3, :date => ByRow(x -> Date(string(x), "yyyymmdd") ) => :date)
-        return df_FF3
-
-    # ----------------------------------------------------------------------------------------------
-    else
-        error("Frequency $frequency not known. Options are :daily, :monthly, or :annual")
-    end
-
+    return _import_ff_factors(frequency, url_mth_yr, url_daily, col_types,
+        col_names_monthly = [:datem, :mktrf, :smb, :hml, :rf],
+        col_names_annual  = [:datey, :mktrf, :smb, :hml, :rf],
+        col_names_daily   = [:date, :mktrf, :smb, :hml, :rf])
 end
 # --------------------------------------------------------------------------------------------------
 
 
 # --------------------------------------------------------------------------------------------------
-function _parse_ff_annual(zip_file; types=nothing)
+# Shared import logic for FF3/FF5/momentum — handles all three frequencies
+# --------------------------------------------------------------------------------------------------
+function _import_ff_factors(frequency::Symbol, url_mth_yr, url_daily, col_types;
+    col_names_monthly, col_names_annual, col_names_daily)
+
+    if frequency == :annual
+
+        z, csv_file = _download_ff_zip(url_mth_yr)
+        df = copy(_parse_ff_annual(csv_file, types=col_types, col_names=col_names_annual))
+        close(z)
+        return df
+
+    elseif frequency == :monthly
+
+        z, csv_file = _download_ff_zip(url_mth_yr)
+        df = copy(_parse_ff_monthly(csv_file, types=col_types, col_names=col_names_monthly))
+        close(z)
+        transform!(df, col_names_monthly[1] => ByRow(x -> MonthlyDate(x, "yyyymm")) => col_names_monthly[1])
+        return df
+
+    elseif frequency == :daily
+
+        z, csv_file = _download_ff_zip(url_daily)
+        df = copy(CSV.File(csv_file, header=4, footerskip=1) |> DataFrame)
+        close(z)
+        rename!(df, col_names_daily)
+        date_col = col_names_daily[1]
+        val_col = col_names_daily[2]
+        subset!(df, date_col => ByRow(!ismissing), val_col => ByRow(!ismissing))
+        transform!(df, :date => ByRow(x -> Date(string(x), "yyyymmdd")) => :date)
+        return df
+
+    else
+        error("Frequency $frequency not known. Options are :daily, :monthly, or :annual")
+    end
+end
+# --------------------------------------------------------------------------------------------------
+
+
+# --------------------------------------------------------------------------------------------------
+function _parse_ff_annual(zip_file; types=nothing,
+    col_names=[:datey, :mktrf, :smb, :hml, :rf])
 
     lines = String[]
     found_annual = false
-    
+
     # Read all lines from the zip file entry
     file_lines = split(String(read(zip_file)), '\n')
-   
+
     for line in file_lines
         if occursin(r"Annual Factors", line)
             found_annual = true
             continue
         end
-        
+
         if found_annual
             # Skip the header line that comes after "Annual Factors"
             if occursin(r"Mkt-RF|SMB|HML|RF", line)
                 continue
             end
-            
+
             if occursin(r"^\s*$", line) || occursin(r"[A-Za-z]{3,}", line[1:min(10, length(line))])
-                if !occursin(r"^\s*$", line) && !occursin(r"^\s*\d{4}", line) # Added \s*
+                if !occursin(r"^\s*$", line) && !occursin(r"^\s*\d{4}", line)
                     break
                 end
                 continue
             end
-            
-            if occursin(r"^\s*\d{4}", line) 
-                clean_line = replace(line, r"[\r]" => "") 
+
+            if occursin(r"^\s*\d{4}", line)
+                clean_line = replace(line, r"[\r]" => "")
                 push!(lines, clean_line)
             end
         end
     end
-    
+
     if !found_annual
         error("Annual Factors section not found in file")
     end
-    
+
     lines_buffer = IOBuffer(join(lines, "\n"))
     return CSV.File(lines_buffer, header=false, delim=",", ntasks=1, types=types) |> DataFrame |>
-           df -> rename!(df, [:datey, :mktrf, :smb, :hml, :rf])
+           df -> rename!(df, col_names)
 end
 # --------------------------------------------------------------------------------------------------
 
 
 # --------------------------------------------------------------------------------------------------
-function _parse_ff_monthly(zip_file; types=nothing)
+function _parse_ff_monthly(zip_file; types=nothing,
+    col_names=[:datem, :mktrf, :smb, :hml, :rf])
 
     # Read all lines from the zip file entry
     file_lines = split(String(read(zip_file)), '\n')
 
     # Find the first data line (starts with digits, like "192607")
-    # instead of hardcoding a skip count that breaks if the header changes
     skipto = 1
     for (i, line) in enumerate(file_lines)
         if occursin(r"^\s*\d{6}", line)
@@ -200,7 +207,7 @@ function _parse_ff_monthly(zip_file; types=nothing)
     buffer = IOBuffer(join(data_lines, "\n"))
 
     return CSV.File(buffer, header=false, delim=",", ntasks=1, types=types) |> DataFrame |>
-           df -> rename!(df, [:datem, :mktrf, :smb, :hml, :rf])
+           df -> rename!(df, col_names)
 
 end
 # --------------------------------------------------------------------------------------------------
