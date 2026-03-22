@@ -11,7 +11,10 @@
 - `import_FF_momentum`: Import Fama-French momentum factor
 - `calculate_portfolio_returns`: Value-weighted and equal-weighted portfolio return calculations
 - `diagnose`: Data quality diagnostics for financial DataFrames
+- `event_study` (experimental): Event study CARs and BHARs with market-adjusted, market model, and mean-adjusted methods
 - WRDS connection now warns about Duo 2FA and gives clear guidance on failure
+- `_validate_date_range`: Warns on reversed, ancient, or future date ranges in WRDS imports
+- Compustat variable validation now queries the actual schema at runtime (falls back to hardcoded list)
 
 ### Internal improvements
 - Removed broken `@log_msg` macro, replaced with `@debug`

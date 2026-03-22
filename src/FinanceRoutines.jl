@@ -40,6 +40,7 @@ include("ImportComp.jl")
 include("Merge_CRSP_Comp.jl")
 include("PortfolioUtils.jl")
 include("Diagnostics.jl")
+include("EventStudy.jl")
 # --------------------------------------------------------------------------------------------------
 
 
@@ -72,6 +73,7 @@ export link_MSF
 export calculate_rolling_betas
 export calculate_portfolio_returns
 export diagnose
+export event_study
 # --------------------------------------------------------------------------------------------------
 
 
