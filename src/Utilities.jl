@@ -78,4 +78,23 @@ end
 # --------------------------------------------------------------------------------------------------
 
 
+# --------------------------------------------------------------------------------------------------
+"""
+    _validate_date_range(date_range; earliest, latest) -> Tuple{Date, Date}
 
+Validate and normalize a date range. Swaps reversed dates, warns on suspicious ranges.
+"""
+function _validate_date_range(date_range::Tuple{Date, Date};
+    earliest::Date=Date("1925-01-01"),
+    latest::Date=Dates.today() + Month(6))
+
+    start_date, end_date = date_range
+    if start_date > end_date
+        @warn "Start date after end date, swapping" start_date end_date
+        start_date, end_date = end_date, start_date
+    end
+    start_date < earliest && @warn "Start date $start_date is before earliest available data ($earliest)"
+    end_date > latest && @warn "End date $end_date is in the future"
+    return (start_date, end_date)
+end
+# --------------------------------------------------------------------------------------------------

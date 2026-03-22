@@ -7,12 +7,14 @@
 
 `FinanceRoutines.jl` is a package that contains useful functions to download and process academic financial data.
 
-So far the package provides function to import:
+The package provides functions to:
 
-  - CRSP and Compustat from the WRDS Postgres server
-  - Fama-French three factors series from Ken French's website
-  - GSW Yield curves from the [NY Fed](https://www.federalreserve.gov/pubs/feds/2006/200628/200628abs.html)
-  - Estimation of betas for stocks
+  - Import CRSP and Compustat from the WRDS Postgres server
+  - Import Fama-French 3-factor, 5-factor, and momentum series from Ken French's website
+  - Import GSW yield curves from the [Federal Reserve](https://www.federalreserve.gov/pubs/feds/2006/200628/200628abs.html) and compute bond returns
+  - Estimate rolling betas for stocks
+  - Calculate equal-weighted and value-weighted portfolio returns
+  - Run data quality diagnostics on financial DataFrames
 
 ## Installation
 
@@ -73,14 +75,20 @@ df_msf = link_MSF(df_linktable,
 df_msf = innerjoin(df_msf, df_funda, on = [:gvkey, :datey], matchmissing=:notequal)
 ```
 
-### Import the Fama-French three factors
+### Import Fama-French factors
 
-This downloads directly data from Ken French's website and formats the data
+Download directly from Ken French's website. Supports 3-factor, 5-factor, and momentum at daily/monthly/annual frequency.
 
 ```julia
+# 3-factor model
 df_FF3 = import_FF3()
-# there is an option to download the daily factors
 df_FF3_daily = import_FF3(frequency=:daily)
+
+# 5-factor model (adds profitability RMW and investment CMA)
+df_FF5 = import_FF5()
+
+# Momentum factor
+df_mom = import_FF_momentum()
 ```
 
 ### Estimate treasury bond returns
@@ -103,15 +111,30 @@ transform!(df_GSW,
 See the [doc](https://louloulibs.github.io/FinanceRoutines.jl/) and tests for more options.
  
 
+### Portfolio returns
+
+```julia
+# Equal-weighted portfolio returns by date
+df_ew = calculate_portfolio_returns(df_msf, :ret, :datem; weighting=:equal)
+
+# Value-weighted by market cap, grouped by size quintile
+df_vw = calculate_portfolio_returns(df_msf, :ret, :datem;
+    weighting=:value, weight_col=:mktcap, groups=:size_quintile)
+```
+
+### Data diagnostics
+
+```julia
+report = diagnose(df_msf)
+report[:missing_rates]      # fraction missing per column
+report[:duplicate_keys]     # duplicate (permno, date) pairs
+report[:suspicious_values]  # extreme returns, negative prices
+```
+
 ### Common operations in asset pricing
 
 Look in the documentation for a guide on how to estimate betas: over the whole sample and using rolling regressions.
-The package exports the function `calculate_rolling_betas`.
-
-
-## To Do
-
-  - `olsgmm` from cochrane GMM code
+The package exports `calculate_rolling_betas`.
 
 
 ## Other references to work with financial data

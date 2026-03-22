@@ -40,6 +40,7 @@ function import_MSF(wrds_conn::Connection;
     variables::Vector{String} = [""]
     )
 
+    date_range = _validate_date_range(date_range)
 
     # -- GETTING COLUMN NAMES
     # download potential columns
@@ -293,11 +294,11 @@ Import the CRSP Monthly Stock File (MSF) from CRSP on WRDS PostGres server from 
 function import_MSF_v2(wrds_conn::Connection;
     date_range::Tuple{Date, Date} = (Date("1900-01-01"), Dates.today()),
     variables::Vector{String} = [""],
-    logging_level::Symbol = :debug, # either none, debug, info etc... tbd 
+    logging_level::Symbol = :debug, # either none, debug, info etc... tbd
     )
 
+    date_range = _validate_date_range(date_range)
 
-    
     # ----------------------------------------------------------------------------------------------
     # the easy way
     @debug "Getting monthly stock file (CIZ) ... msf_v2"
@@ -445,9 +446,10 @@ end
 # --------------------------------------------------------------------------------------------------
 function import_DSF(wrds_conn::Connection;
     date_range::Tuple{Date, Date} = (Date("1900-01-01"), Dates.today()),
-    logging_level::Symbol = :debug, # either none, debug, info etc... tbd 
+    logging_level::Symbol = :debug, # either none, debug, info etc... tbd
     )
 
+    date_range = _validate_date_range(date_range)
 
     # set up the query for msf
     postgre_query_dsf = """
@@ -480,9 +482,10 @@ end
 # --------------------------------------------------------------------------------------------------
 function import_DSF_v2(wrds_conn::Connection;
     date_range::Tuple{Date, Date} = (Date("1900-01-01"), Dates.today()),
-    logging_level::Symbol = :debug, # either none, debug, info etc... tbd 
+    logging_level::Symbol = :debug, # either none, debug, info etc... tbd
     )
 
+    date_range = _validate_date_range(date_range)
 
     # could pick either way ... 
     # dsf_columns = _get_postgres_columns("crsp", "dsf_v2"; wrds_conn=wrds_conn) |> sort
