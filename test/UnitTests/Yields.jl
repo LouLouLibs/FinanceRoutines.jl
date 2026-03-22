@@ -318,6 +318,19 @@
         @test FinanceRoutines.bond_yield_excel(Date("2014-07-31"), Date("2032-05-15"), 0.05, 114.083, 100.0; frequency=2) ≈ 0.0389 atol=5e-4
     end
 
+    @testset "Missing value flag handling" begin
+        @test ismissing(FinanceRoutines._safe_parse_float(-999.99))
+        @test ismissing(FinanceRoutines._safe_parse_float(-999.0))
+        @test ismissing(FinanceRoutines._safe_parse_float(-9999.0))
+        @test ismissing(FinanceRoutines._safe_parse_float(-99.99))
+        @test !ismissing(FinanceRoutines._safe_parse_float(-5.0))  # legitimate negative
+        @test FinanceRoutines._safe_parse_float(3.14) ≈ 3.14
+        @test ismissing(FinanceRoutines._safe_parse_float(""))
+        @test ismissing(FinanceRoutines._safe_parse_float(missing))
+        @test FinanceRoutines._safe_parse_float("2.5") ≈ 2.5
+        @test ismissing(FinanceRoutines._safe_parse_float("abc"))
+    end
+
 end  # @testset "GSW Extended Test Suite"
 
 
