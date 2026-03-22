@@ -300,7 +300,7 @@ function import_MSF_v2(wrds_conn::Connection;
     
     # ----------------------------------------------------------------------------------------------
     # the easy way
-    @log_msg "# -- GETTING MONTHLY STOCK FILE (CIZ) ... msf_v2"
+    @debug "Getting monthly stock file (CIZ) ... msf_v2"
     msf_v2_columns = _get_postgres_columns("crsp", "msf_v2"; wrds_conn=wrds_conn) |> sort
     col_select = ["permno", "hdrcusip", "mthcaldt", "mthprc", "mthret", "mthcap", "shrout",
         "mthretx", "mthprevcap", "mthprevprc", "permco"]
@@ -328,7 +328,7 @@ function import_MSF_v2(wrds_conn::Connection;
     # ----------------------------------------------------------------------------------------------
     # the hard way
     # ------
-    log_msg("# -- GETTING MONTHLY STOCK FILE (CIZ) ... stkmthsecuritydata")
+    @debug "Getting monthly stock file (CIZ) ... stkmthsecuritydata"
     msf_columns = _get_postgres_columns("crsp", "stkmthsecuritydata"; wrds_conn=wrds_conn) # download potential columns
     # msf_columns = _get_postgres_columns("crsp", "msf_v2"; wrds_conn=wrds_conn) # this one is pre-merged!
     msf_columns = join(uppercase.(msf_columns), ", ")
@@ -378,7 +378,7 @@ function import_MSF_v2(wrds_conn::Connection;
 
     # ----------------------------------------------------------------------------------------------
     # ------
-    @log_msg "# -- GETTING StkSecurityInfoHist (CIZ)"
+    @debug "Getting StkSecurityInfoHist (CIZ)"
     # stksecurityinfo = _get_postgres_columns("crsp", "stksecurityinfohist"; wrds_conn=wrds_conn)
     stksecurityinfo_cols = vcat(
         ["PERMNO", "SecInfoStartDt", "SecInfoEndDt", "IssuerNm", "ShareClass",
@@ -397,7 +397,7 @@ function import_MSF_v2(wrds_conn::Connection;
     disallowmissing!(df_stksecurityinfo, [:permno, :secinfostartdt, :secinfoenddt, :issuernm, :hdrcusip])
 
     # ------
-    @log_msg "# -- MERGING STOCK PRICES, INFO FILE"
+    @debug "Merging stock prices, info file"
     # we do left-join here because we dont want to lose obs. 
     df_msf_v2 = FlexiJoins.leftjoin( 
         (df_msf_v2, df_stksecurityinfo),

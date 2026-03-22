@@ -16,7 +16,6 @@ import GLM: coef, lm
 import IntervalSets:(..)
 import LibPQ: LibPQ.execute, LibPQ.Connection
 import LinearAlgebra: qr
-import Logging: Logging, with_logger, ConsoleLogger, @logmsg, Logging.Debug, Logging.Info, Logging.Warn, Logging.Error
 import Missings: Missings, missing, disallowmissing
 import PeriodicalDates: MonthlyDate
 import Roots
@@ -42,7 +41,6 @@ include("Merge_CRSP_Comp.jl")
 
 # --------------------------------------------------------------------------------------------------
 # List of exported functions
-export greet_FinanceRoutines  # for debugging
 
 # Yields on Treasuries
 export import_gsw_parameters # basic data import function
