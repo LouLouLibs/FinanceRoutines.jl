@@ -296,9 +296,8 @@ function _safe_parse_float(value)
     try
         numeric_value = Float64(value)
         
-        # Check for common missing data flags used in economic datasets
-        # -999, -9999 are common flags for missing/unavailable data
-        if numeric_value == -999.99 
+        # Common missing data flags in economic/financial datasets
+        if numeric_value in (-999.99, -999.0, -9999.0, -99.99)
             return missing
         end
         
