@@ -137,22 +137,15 @@ function _parse_ff_annual(zip_file; types=nothing,
         end
 
         if found_annual
-            # Skip the header line that comes after "Annual Factors"
-            if occursin(r"Mkt-RF|SMB|HML|RF", line)
-                continue
-            end
-
-            if occursin(r"^\s*$", line) || occursin(r"[A-Za-z]{3,}", line[1:min(10, length(line))])
-                if !occursin(r"^\s*$", line) && !occursin(r"^\s*\d{4}", line)
-                    break
-                end
-                continue
-            end
-
+            # Data lines start with a 4-digit year
             if occursin(r"^\s*\d{4}", line)
                 clean_line = replace(line, r"[\r]" => "")
                 push!(lines, clean_line)
+            elseif !isempty(lines) && occursin(r"^\s*$", line)
+                # Empty line after we've started collecting data = end of section
+                break
             end
+            # Otherwise skip (headers, sub-headers, blank lines before data)
         end
     end
 
@@ -209,5 +202,91 @@ function _parse_ff_monthly(zip_file; types=nothing,
     return CSV.File(buffer, header=false, delim=",", ntasks=1, types=types) |> DataFrame |>
            df -> rename!(df, col_names)
 
+end
+# --------------------------------------------------------------------------------------------------
+
+
+# --------------------------------------------------------------------------------------------------
+"""
+    import_FF5(;frequency::Symbol=:monthly) -> DataFrame
+
+Import Fama-French 5-factor model data directly from Ken French's data library.
+
+Downloads and parses the Fama-French 5-factor research data (market risk premium,
+size, value, profitability, and investment factors plus the risk-free rate).
+
+# Arguments
+- `frequency::Symbol=:monthly`: Data frequency. Options: `:monthly`, `:annual`, `:daily`
+
+# Returns
+- `DataFrame` with columns:
+  - **Monthly**: `datem`, `mktrf`, `smb`, `hml`, `rmw`, `cma`, `rf`
+  - **Annual**: `datey`, `mktrf`, `smb`, `hml`, `rmw`, `cma`, `rf`
+  - **Daily**: `date`, `mktrf`, `smb`, `hml`, `rmw`, `cma`, `rf`
+
+Where:
+- `mktrf`: Market return minus risk-free rate
+- `smb`: Small minus big (size)
+- `hml`: High minus low (value)
+- `rmw`: Robust minus weak (profitability)
+- `cma`: Conservative minus aggressive (investment)
+- `rf`: Risk-free rate
+
+# Examples
+```julia
+monthly_ff5 = import_FF5()
+annual_ff5 = import_FF5(frequency=:annual)
+daily_ff5 = import_FF5(frequency=:daily)
+```
+
+# Data Source
+Kenneth R. French Data Library: https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html
+"""
+function import_FF5(;frequency::Symbol=:monthly)
+    url_mth_yr = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_5_Factors_2x3_CSV.zip"
+    url_daily  = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_5_Factors_2x3_daily_CSV.zip"
+    col_types  = [String7, Float64, Float64, Float64, Float64, Float64, Float64]
+
+    return _import_ff_factors(frequency, url_mth_yr, url_daily, col_types,
+        col_names_monthly = [:datem, :mktrf, :smb, :hml, :rmw, :cma, :rf],
+        col_names_annual  = [:datey, :mktrf, :smb, :hml, :rmw, :cma, :rf],
+        col_names_daily   = [:date, :mktrf, :smb, :hml, :rmw, :cma, :rf])
+end
+# --------------------------------------------------------------------------------------------------
+
+
+# --------------------------------------------------------------------------------------------------
+"""
+    import_FF_momentum(;frequency::Symbol=:monthly) -> DataFrame
+
+Import Fama-French momentum factor from Ken French's data library.
+
+# Arguments
+- `frequency::Symbol=:monthly`: Data frequency. Options: `:monthly`, `:annual`, `:daily`
+
+# Returns
+- `DataFrame` with columns:
+  - **Monthly**: `datem`, `mom`
+  - **Annual**: `datey`, `mom`
+  - **Daily**: `date`, `mom`
+
+# Examples
+```julia
+monthly_mom = import_FF_momentum()
+daily_mom = import_FF_momentum(frequency=:daily)
+```
+
+# Data Source
+Kenneth R. French Data Library: https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html
+"""
+function import_FF_momentum(;frequency::Symbol=:monthly)
+    url_mth_yr = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Momentum_Factor_CSV.zip"
+    url_daily  = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Momentum_Factor_daily_CSV.zip"
+    col_types  = [String7, Float64]
+
+    return _import_ff_factors(frequency, url_mth_yr, url_daily, col_types,
+        col_names_monthly = [:datem, :mom],
+        col_names_annual  = [:datey, :mom],
+        col_names_daily   = [:date, :mom])
 end
 # --------------------------------------------------------------------------------------------------

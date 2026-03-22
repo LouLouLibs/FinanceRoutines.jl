@@ -50,7 +50,7 @@ export gsw_yield, gsw_price, gsw_forward_rate, gsw_yield_curve, gsw_price_curve,
     gsw_return, gsw_excess_return
 
 # Fama-French data
-export import_FF3
+export import_FF3, import_FF5, import_FF_momentum
 
 # WRDS
 # -- CRSP
