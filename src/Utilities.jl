@@ -14,9 +14,17 @@ end
 
 # --------------------------------------------------------------------------------------------------
 """
-    Open a Postgres connection on WRDS server
+    open_wrds_pg(user, password)
+
+Open a Postgres connection on WRDS server.
+
+!!! note "Duo Two-Factor Authentication"
+    WRDS requires Duo 2FA. You may receive a push notification or need to approve
+    a login request on your device. If the connection fails due to SSL/timeout,
+    do NOT retry automatically — repeated attempts can trigger an account lockout.
 """
 function open_wrds_pg(user::AbstractString, password::AbstractString)
+    @info "Connecting to WRDS — you may receive a Duo 2FA push notification"
     conn_str = """
         host = wrds-pgdata.wharton.upenn.edu
         port = 9737
@@ -24,8 +32,12 @@ function open_wrds_pg(user::AbstractString, password::AbstractString)
         password='$password'
         sslmode = 'require' dbname = wrds
     """
-    wrds_conn = Connection(conn_str)
-    return wrds_conn
+    try
+        return Connection(conn_str)
+    catch e
+        @error "WRDS connection failed. If this is an SSL/timeout error, check your network and Duo 2FA before retrying — repeated failures may lock your account." exception=(e, catch_backtrace())
+        rethrow(e)
+    end
 end
 
 function open_wrds_pg()
