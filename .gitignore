@@ -10,6 +10,8 @@ docs/.DS_Store
 .env.gpg
 documentation
 .claude
+docs/superpowers/
+*.cov
 # ---------------------------------------------------------
 
 
