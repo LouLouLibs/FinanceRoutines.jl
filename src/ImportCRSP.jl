@@ -305,7 +305,7 @@ function import_MSF_v2(wrds_conn::Connection;
     msf_v2_columns = _get_postgres_columns("crsp", "msf_v2"; wrds_conn=wrds_conn) |> sort
     col_select = ["permno", "hdrcusip", "mthcaldt", "mthprc", "mthret", "mthcap", "shrout",
         "mthretx", "mthprevcap", "mthprevprc", "permco"]
-    col_query = @p vcat(col_select, variables) |> 
+    col_query = @p vcat(col_select, variables) |> unique |>
         uppercase.(__) |> filter(!isempty) |> filter(_ ∈ msf_v2_columns)
     # note that selecting all variables to download here is a lot slower than with msf_v1 because of the many more variables ...
 
